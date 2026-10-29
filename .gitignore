@@ -1,0 +1,40 @@
+# ── Dependencias ──────────────────────────────────
+node_modules/
+
+# ── Build / salida de compilación ─────────────────
+dist/
+build/
+.vite/
+
+# ── Variables de entorno (¡NUNCA subir secretos!) ──
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+# Los ejemplos .env.example SÍ se suben (son plantillas sin secretos)
+
+# ── Logs ──────────────────────────────────────────
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ── Sistema / editores ────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# ── Prisma / bases locales ────────────────────────
+*.db
+*.db-journal
+prisma/dev.db
+
+# ── Cobertura / test ──────────────────────────────
+coverage/
+.nyc_output/

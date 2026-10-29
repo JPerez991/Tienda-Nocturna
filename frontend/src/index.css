@@ -1,0 +1,100 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Nocturna — sistema de diseño minimalista (ver SKILL.md)
+   Paleta: tinta negra, crema y nudes/taupe (estilo SKIMS).
+   Lenguaje editorial: ESQUINAS RECTAS en toda la UI, sin sombras
+   difusas (separación por hairlines), botones en versalitas.
+   ============================================================ */
+@theme {
+  --color-tinta: #14100e; /* negro cálido — primario, texto de marca */
+  --color-tinta-suave: #2a2320; /* hover de primarios */
+  --color-carbon: #2b2422; /* texto principal */
+  --color-tibio: #716a64; /* texto secundario (taupe) */
+  --color-crema: #faf7f4; /* fondo de página (crema cálida) */
+  --color-nude: #f3ece5; /* fondos de secciones y paneles */
+  --color-acento: #86715f; /* espresso nude: hovers, estrellas, detalles */
+  --color-acento-claro: #d9cfc3; /* ivory nude — acento sobre oscuros */
+  --color-acento-fondo: #efe8df; /* beige cálido: badges y paneles suaves */
+  --color-vino: #7a2e39; /* peligro / errores */
+
+  /* Paleta de negros (skill paleta-negros) — capas para superficies oscuras */
+  --color-noir: #0a0908; /* profundidad máxima: lavados y bases hondas */
+  --color-grafito: #24201d; /* capa media tonal: halos sobre tinta */
+  --color-humo: #3a3431; /* tono claro: hairlines sobre oscuro */
+
+  --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
+  --font-banner: "Bodoni Moda", "Playfair Display", Georgia, serif; /* titular del banner (didone de moda) */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* Escala tipográfica base 16px, ratio 1.25 */
+html {
+  font-size: 16px;
+}
+
+body {
+  @apply bg-crema text-carbon font-sans antialiased;
+}
+
+/* En @layer base: sin layer, esta regla pisaría (cascade) las utilities
+   de Tailwind como font-banner en el h1 del banner. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+}
+
+/* Focus visible en TODOS los elementos interactivos (accesibilidad).
+   En superficies oscuras (header/footer) el anillo es crema. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  @apply outline-2 outline-offset-2 outline-tinta;
+}
+header :where(a, button, input, select, textarea, [tabindex]):focus-visible,
+footer :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  @apply outline-crema;
+}
+
+/* Etiqueta editorial en versalitas (categorías, eyebrows) */
+.etiqueta {
+  @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-tibio;
+}
+
+/* Barra de scroll sutil en paneles con scroll horizontal */
+.scroll-sutil::-webkit-scrollbar {
+  height: 6px;
+}
+.scroll-sutil::-webkit-scrollbar-thumb {
+  @apply bg-acento/40;
+}
+
+/* Carga: tres cuadros que pulsan (sustituyen al spinner circular) */
+.carga-puntos {
+  display: inline-flex;
+  gap: 6px;
+}
+.carga-puntos > span {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  animation: punto-carga 1.2s ease-in-out infinite;
+}
+.carga-puntos > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.carga-puntos > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes punto-carga {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}

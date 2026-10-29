@@ -1,0 +1,284 @@
+// ============================================================================
+// Nocturna — e-commerce de lencería — Esquema de base de datos (PostgreSQL)
+// Patrón: modelos del dominio + enums + relaciones explícitas.
+// Regla de dinero: montos en COP como ENTEROS (pesos sin decimales) para
+// evitar errores de punto flotante en pagos e inventario.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// ENUMS
+// ---------------------------------------------------------------------------
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING      // creado, sin pagar
+  PAID         // pago confirmado
+  PROCESSING   // pago confirmado, preparando el envío
+  SHIPPED      // en transportadora
+  DELIVERED    // entregado
+  CANCELLED    // cancelado
+  REFUNDED     // reembolsado
+}
+
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  DECLINED
+  VOIDED
+  REFUNDED
+}
+
+// Medios de pago populares en Colombia
+enum PaymentMethod {
+  NEQUI
+  DAVIPLATA
+  PSE
+  CREDIT_CARD
+  DEBIT_CARD
+  BANCOLOMBIA
+}
+
+enum QuestionStatus {
+  PENDING
+  ANSWERED
+}
+
+// ---------------------------------------------------------------------------
+// USUARIOS Y DIRECCIONES (Colombia)
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String // nunca texto plano
+  firstName    String
+  lastName     String
+  phone        String? // requerido para Nequi/Daviplata
+  role         Role      @default(CUSTOMER)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  addresses Address[]
+  cart      CartItem[]
+  orders    Order[]
+  reviews   Review[]
+
+  @@index([email])
+}
+
+model Address {
+  id           String  @id @default(cuid())
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alias       String // "Casa", "Oficina"
+  recipient    String // nombre de quien recibe
+  phone        String
+  departamento String // ej. "Antioquia"
+  municipio    String // ej. "Medellín"
+  direccion    String // ej. "Cra 43 # 12-34"
+  apartamento  String? // piso / apto / barrio
+  codigoPostal String? // "050021"
+  isDefault    Boolean @default(false)
+
+  orders Order[]
+}
+
+// ---------------------------------------------------------------------------
+// CATÁLOGO: categorías y productos
+// ---------------------------------------------------------------------------
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  imageUrl    String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String
+  // Precio base en COP (entero). Ej: 120000 = $120.000
+  price       Int
+  compareAtPrice Int?  // precio tachado para mostrar descuento
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  images   ProductImage[]
+  variants ProductVariant[]
+  reviews  Review[]
+  questions Question[]
+
+  @@index([categoryId])
+  @@index([slug])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String  @default("")
+  position  Int     @default(0) // orden en el carrusel
+}
+
+// Variante = combinación de talla/color/material. Una venta NO puede quedar
+// sin stock: el inventario se controla aquí de forma atómica.
+model ProductVariant {
+  id             String  @id @default(cuid())
+  productId      String
+  product        Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku            String  @unique
+  name           String // ej. "Rojo / Mediano"
+  priceOverride  Int? // si difiere del precio base
+  stock          Int     @default(0)
+  isActive       Boolean @default(true)
+
+  cartItems CartItem[]
+  orderItems OrderItem[]
+
+  @@index([productId])
+}
+
+// ---------------------------------------------------------------------------
+// CARRITO Y PEDIDOS
+// ---------------------------------------------------------------------------
+
+model CartItem {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity  Int
+  createdAt DateTime       @default(now())
+
+  @@unique([userId, variantId]) // un solo renglón por variante por usuario
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  // Número amigable para el cliente, ej. "NA-2026-000123"
+  orderNumber String      @unique
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  addressId   String
+  address     Address     @relation(fields: [addressId], references: [id])
+  status      OrderStatus @default(PENDING)
+  // Totales en COP (enteros)
+  subtotal    Int
+  shipping    Int         @default(0)
+  discount    Int         @default(0)
+  total       Int
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  items   OrderItem[]
+  payment Payment?
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id        String         @id @default(cuid())
+  orderId   String
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  // Precio CONGELADO al momento de comprar (el precio puede cambiar después)
+  unitPrice Int
+  quantity  Int
+  // Snapshot del producto para el historial aunque el producto cambie
+  name      String
+  sku       String
+
+  @@index([orderId])
+}
+
+// ---------------------------------------------------------------------------
+// PAGOS (Wompi vía patrón Adapter — intercambiable)
+// ---------------------------------------------------------------------------
+
+model Payment {
+  id               String        @id @default(cuid())
+  orderId          String        @unique
+  order            Order         @relation(fields: [orderId], references: [id])
+  method           PaymentMethod
+  status           PaymentStatus @default(PENDING)
+  // Monto en COP (entero)
+  amount           Int
+  // Referencia única hacia la pasarela (Wompi transaction id)
+  gatewayRef       String?       @unique
+  // Idempotency key para evitar cobros dobles
+  idempotencyKey   String        @unique
+  // Datos crudos del webhook para auditoría (sin datos de tarjeta)
+  rawWebhook       Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// ENGAGEMENT: reseñas, preguntas y banners
+// ---------------------------------------------------------------------------
+
+model Review {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating    Int // 1..5, validar en DTO
+  comment   String?
+  createdAt DateTime @default(now())
+
+  @@unique([productId, userId]) // una reseña por usuario por producto
+}
+
+model Question {
+  id        String         @id @default(cuid())
+  productId String
+  product   Product        @relation(fields: [productId], references: [id], onDelete: Cascade)
+  author    String // nombre público del comprador
+  content   String
+  answer    String? // respuesta del admin
+  status    QuestionStatus @default(PENDING)
+  createdAt DateTime       @default(now())
+  answeredAt DateTime?
+}
+
+model Banner {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String?
+  imageUrl  String
+  linkUrl   String?
+  position  Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
