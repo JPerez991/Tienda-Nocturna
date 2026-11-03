@@ -30,6 +30,15 @@ frontend/            → UI React + Vite + Tailwind (identidad Nocturna)
    > (necesita una shadow DB que no está configurada).
 4. `npm run dev` (API en `:8080`) y `npm run db:studio` (ver/editar datos en el navegador).
 5. En otra terminal: `cd frontend && npm install && npm run dev` (UI en `:5173`).
+6. **Pagos en local: abre la tienda en `http://[::1]:5173`** (no en `localhost`).
+   - El WAF de Wompi responde **403** si el `redirect-url` contiene `localhost` o
+     `127.0.0.1`, así que `CORS_ORIGIN` del backend apunta al **loopback IPv6**:
+     lo acepta Wompi y Vite lo sirve sin configuración extra. (Otras válidas:
+     una IP de red con `vite --host`, o un túnel https para acercarse a producción.)
+   - Flujo: `Checkout → pagar → vuelta a /pedidos?id=<transacción>`, donde el
+     backend confirma el estado contra Wompi y el pedido pasa a **Pagado**.
+   - Tarjeta de prueba sandbox: **`4242 4242 4242 4242`** (aprobada) ·
+     `4111 1111 1111 1111` (declinada) · fecha futura y CVC de 3 dígitos.
 
 ## Acceso (usuarios de prueba)
 | Rol | Email | Contraseña |

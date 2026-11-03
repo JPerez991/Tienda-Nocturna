@@ -44,6 +44,15 @@ export const orderRepository = {
     });
   },
 
+  // Mismo detalle pero por el número de pedido (= referencia de la pasarela).
+  // Lo usa la confirmación de pago tras el retorno de Wompi.
+  findOrderByNumber(orderNumber: string) {
+    return prisma.order.findUnique({
+      where: { orderNumber },
+      include: { items: true, payment: true, address: true },
+    });
+  },
+
   listByUser(userId: string) {
     return prisma.order.findMany({
       where: { userId },

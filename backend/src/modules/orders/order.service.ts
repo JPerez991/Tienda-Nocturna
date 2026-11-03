@@ -198,7 +198,9 @@ export const orderService = {
 
     // La pasarela se consulta FUERA de la transacción (es lenta y externa).
     let redirectUrl: string;
-    let gatewayRef: string;
+    // Con checkout alojado el id de la transacción no existe todavía: llega en
+    // el "?id=" del retorno y se guarda en la confirmación (nota 21).
+    let gatewayRef: string | undefined;
     try {
       const result = await createPaymentGateway().createPayment({
         amountInCents: total,
@@ -223,9 +225,11 @@ export const orderService = {
     }
 
     // Estos dos pasos no deben romper la compra si fallan: se registran.
-    await orderRepository.saveGatewayRef(payment.id, gatewayRef).catch((error) => {
-      console.error(`No se guardó el gatewayRef del pago ${payment.id}:`, error);
-    });
+    if (gatewayRef) {
+      await orderRepository.saveGatewayRef(payment.id, gatewayRef).catch((error) => {
+        console.error(`No se guardó el gatewayRef del pago ${payment.id}:`, error);
+      });
+    }
     await orderRepository.clearCart(userId).catch((error) => {
       console.error(`No se vació el carrito del usuario ${userId}:`, error);
     });
@@ -270,7 +274,9 @@ export const orderService = {
           phone: user.phone ?? undefined,
         },
       });
-      await orderRepository.saveGatewayRef(order.payment.id, result.gatewayRef);
+      if (result.gatewayRef) {
+        await orderRepository.saveGatewayRef(order.payment.id, result.gatewayRef);
+      }
       redirectUrl = result.redirectUrl;
     } catch {
       throw new AppError(502, "No pudimos iniciar el pago con la pasarela. Intenta nuevamente.");

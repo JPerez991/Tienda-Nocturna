@@ -15,7 +15,9 @@ const envSchema = z.object({
 
   WOMPI_PUBLIC_KEY: z.string().min(1),
   WOMPI_PRIVATE_KEY: z.string().min(1),
+  // Webhook (eventos) e integridad (firma del checkout): secretos distintos.
   WOMPI_WEBHOOK_SECRET: z.string().min(1),
+  WOMPI_INTEGRITY_KEY: z.string().min(1),
   WOMPI_ENV: z.enum(["sandbox", "production"]).default("sandbox"),
 });
 

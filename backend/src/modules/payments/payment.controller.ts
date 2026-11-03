@@ -1,5 +1,7 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
 import { paymentService } from "./payment.service.js";
+import { confirmPaymentSchema } from "./payment.schemas.js";
+import { parse } from "../../shared/validation/parse.js";
 import { AppError } from "../../shared/errors/app-error.js";
 
 // Wompi puede firmar con "x-event-signature" o "x-signature" según la versión
@@ -27,5 +29,16 @@ export const paymentController = {
 
     // Siempre 2xx cuando la firma es válida: Wompi deja de reintentar.
     return reply.status(200).send({ received: true, processed: result.processed });
+  },
+
+  // Confirmación desde el frontend tras volver de checkout.wompi.co
+  // (lleva sesión de cliente; el backend consulta a Wompi con la llave privada).
+  async confirm(request: FastifyRequest, reply: FastifyReply) {
+    const body = parse(confirmPaymentSchema, request.body);
+    const result = await paymentService.confirmRedirect(
+      request.user!.id,
+      body.transactionId,
+    );
+    return reply.send(result);
   },
 };

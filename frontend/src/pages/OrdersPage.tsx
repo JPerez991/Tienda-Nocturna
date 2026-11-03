@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { api } from "../lib/api";
 import { formatCOP } from "../lib/format";
 import type { Order, OrderStatus } from "../lib/types";
@@ -26,11 +26,55 @@ export function StatusBadge({ status }: { status: OrderStatus }) {
 
 export function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
+  const location = useLocation();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  /** Aviso específico de la confirmación de pago (no lo borra la carga de lista). */
+  const [confirmError, setConfirmError] = useState<string | null>(null);
   /** Refrescos automáticos mientras haya pagos pendientes (nota c.2). */
   const [intentosConf, setIntentosConf] = useState(0);
+
+  // Wompi regresa de checkout.wompi.co con "?id=<transacción>". El backend
+  // consulta ese estado a Wompi y marca/marcó el pedido; aquí solo lo
+  // disparamos UNA vez y luego refrescamos la lista (nota 21).
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(location.search);
+    const transactionId = params.get("id");
+    if (!transactionId) return;
+
+    let cancelled = false;
+    api.payments
+      .confirm(transactionId)
+      .catch((e) => {
+        if (!cancelled)
+          setConfirmError(
+            e instanceof Error
+              ? `No pudimos confirmar tu pago: ${e.message}`
+              : "No pudimos confirmar tu pago. Recarga la página en unos segundos.",
+          );
+      })
+      .finally(() => {
+        if (cancelled) return;
+        // Quitamos el parámetro para que no se reenvíe al refrescar.
+        params.delete("id");
+        const query = params.toString();
+        window.history.replaceState(
+          null,
+          "",
+          `${location.pathname}${query ? `?${query}` : ""}`,
+        );
+        setIntentosConf(0);
+        setReloadKey((k) => k + 1);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // location.search no cambia dentro del efecto: usamos history.replaceState,
+    // así que este efecto no se repite en bucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, location.search]);
 
   useEffect(() => {
     if (!user) return;
@@ -93,6 +137,17 @@ export function OrdersPage() {
             ? "Algún pedido sigue pendiente de pago. Refresca la página en unos minutos."
             : "Confirmando tu pago… Wompi puede tardar unos segundos; esta lista se actualiza sola."}
         </p>
+      )}
+
+      {/* Fallo al confirmar el pago tras el retorno de Wompi (nota 21) */}
+      {confirmError && (
+        <div
+          role="alert"
+          className="mb-6 flex flex-wrap items-center gap-3 border border-carbon/5 bg-white px-4 py-3 text-sm text-tinta"
+        >
+          <Badge tone="danger">Pago sin confirmar</Badge>
+          <span>{confirmError}</span>
+        </div>
       )}
 
       {error ? (

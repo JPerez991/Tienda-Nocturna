@@ -13,6 +13,7 @@ import type {
   Order,
   OrderDetail,
   OrderStatus,
+  PaymentConfirmResponse,
   PaymentMethod,
   PayResponse,
   Product,
@@ -143,6 +144,12 @@ export const api = {
     detail: (id: string) => get<OrderDetail>(`/api/orders/${id}`),
     /** Reintentar pago de pedido PENDING (nota 11). Si devuelve 404, la UI avisa. */
     pay: (id: string) => post<PayResponse>(`/api/orders/${id}/pay`),
+  },
+
+  /* Retorno de checkout.wompi.co: confirma el pago contra Wompi (nota 21) */
+  payments: {
+    confirm: (transactionId: string) =>
+      post<PaymentConfirmResponse>("/api/payments/confirm", { transactionId }),
   },
 
   /* Admin (requiere rol ADMIN; el backend aplica requireRole) */

@@ -351,6 +351,26 @@ usuario (**11 fotos → 11 productos**; la 11ª es `.avif`). Cómo quedó resuel
 
 ## Notas para FRONTEND (las escribe el BACKEND)
 
+### Nota. CHECKOUT ALOJADO DE WOMPI + CONFIRMACIÓN POR RETORNO — 2026-11-02
+
+**Qué cambió**: el pago ya no se crea por API (`POST /v1/transactions` devolvía `422` sin
+`payment_method`/`signature`/`acceptance_token`). Ahora `POST /api/orders/checkout` devuelve en
+`payment.redirectUrl` la **página alojada de Wompi** (`https://checkout.wompi.co/p/?…`) firmada con
+el secreto de integridad. **Tu código NO cambia**: sigue `window.location.href = res.payment.redirectUrl`.
+
+**Lo que SÍ necesito del FRONTEND** (ya implementado en `OrdersPage`, sección 5 del contrato):
+Wompi redirige a `{CORS_ORIGIN}/pedidos?id=<id-transacción>` → llama
+`POST /api/payments/confirm { transactionId }` antes de listar y quita el `?id=` de la URL.
+Mientras el pago siga `PENDING`, repite a los ~15 s (tu refresco automático ya existe).
+
+**Por qué**: el webhook de Wompi exige una URL pública HTTPS (no corre en localhost). La
+confirmación por consulta directa a `GET /v1/transactions/{id}` con la llave privada es la vía que
+funciona ya en dev; el webhook queda activo para cuando haya dominio público (misma lógica de
+estados en ambas rutas, así no hay divergencias).
+
+**Verificado hoy en sandbox**: token `tok_test_2244720_…` + transacción `12244720-1793662884-20753`
+= **`APPROVED`** (`processor_response_code: "00"`, $101.000 COP, tarjeta `4242 4242 4242 4242`).
+
 ### ✅ RESPUESTAS DEL BACKEND — 2026-10-26
 
 **A. Respuestas a tus 5 preguntas**
@@ -601,6 +621,30 @@ Webhook de Wompi — **el frontend NO lo llama**. Verifica la firma `HMAC-SHA256
 
 Respuesta `200`: `{ "received": true, "processed": true }` (`processed: false` si el evento ya estaba aplicado).
 Errores: `400` cuerpo vacío, notificación incompleta o monto distinto · `401` firma ausente o inválida · `404` transacción desconocida.
+
+### `POST /api/payments/confirm` — confirmar pago tras el retorno de Wompi
+Wompi regresa a `{CORS_ORIGIN}/pedidos?id=<id-de-transacción>`. En esa página, **antes de listar pedidos**, envía (con sesión de cliente):
+```json
+{ "transactionId": "01-1793662884-20753" }
+```
+El backend consulta el estado **real** a la API de Wompi (llave privada) y aplica exactamente el mismo cambio de estado que el webhook. Respuesta `200`:
+```json
+{ "orderId": "cuid", "orderNumber": "NA-2026-000123", "paymentStatus": "APPROVED", "orderStatus": "PAID" }
+```
+- `paymentStatus`: `PENDING | APPROVED | DECLINED | VOIDED | REFUNDED` (9) · `orderStatus`: enum de 7 estados (8).
+- Si sigue `PENDING`, **no** cambia nada: repite la llamada a los ~15 s o recarga la lista (ya refresca sola mientras haya pendientes).
+- Al confirmar, el backend guarda en el pago el `gatewayRef` (id de la transacción) para auditoría.
+- Errores: `400` monto distinto al pedido o `transactionId` vacío · `403` no es tuyo · `404` pedido inexistente · `502` Wompi no respondió.
+
+> **Cambio de integración (2026-11-02)**: el checkout ahora es el **alojado de Wompi**
+> (`https://checkout.wompi.co/p/?public-key=…&amount-in-cents=…&reference=…&signature:integrity=…&redirect-url=…`).
+> Tu flujo NO cambia: sigues haciendo `window.location.href = res.payment.redirectUrl`.
+> Lo nuevo es **este** `POST /api/payments/confirm` al volver, porque el webhook exige una URL pública HTTPS.
+>
+> ⚠️ **Dev**: `CORS_ORIGIN` (que define el `redirect-url`) es `http://[::1]:5173` — el WAF de
+> Wompi devuelve **403** con `localhost`/`127.0.0.1`. **Abre la tienda en `http://[::1]:5173`**
+> (Vite la sirve igual y la sesión/cookies funcionan allí). Verificado en sandbox 2026-11-02:
+> el checkout alojado carga en "MODO DE PRUEBAS" y paga con `4242 4242 4242 4242`.
 
 ### `GET /api/orders`
 Historial del usuario (más recientes primero), arreglo plano:

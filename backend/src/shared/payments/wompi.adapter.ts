@@ -1,9 +1,11 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { env } from "../../config/env.js";
 import type {
   CreatePaymentInput,
   CreatePaymentResult,
   PaymentGateway,
+  TransactionSnapshot,
+  TransactionStatus,
   WebhookVerification,
 } from "./types.js";
 
@@ -16,6 +18,19 @@ const WOMPI_API = {
   production: "https://production.wompi.co/v1",
 } as const;
 
+// Estados que Wompi usa en transacciones (cualquier otro → ERROR).
+const STATUS_MAP: Record<string, TransactionStatus> = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  DECLINED: "DECLINED",
+  VOIDED: "VOIDED",
+  REFUNDED: "REFUNDED",
+  ERROR: "ERROR",
+};
+
+// Estados que el webhook puede reflejar en un pago registrado.
+const WEBHOOK_STATUSES = ["APPROVED", "DECLINED", "VOIDED", "REFUNDED"] as const;
+
 export class WompiAdapter implements PaymentGateway {
   readonly name = "wompi";
   private baseUrl = WOMPI_API[env.WOMPI_ENV];
@@ -25,34 +40,48 @@ export class WompiAdapter implements PaymentGateway {
     // multiplicamos por 100 para respetar su formato.
     const amountInCents = input.amountInCents * 100;
 
-    const res = await fetch(`${this.baseUrl}/transactions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${env.WOMPI_PRIVATE_KEY}`, // llave PRIVADA solo aquí
-      },
-      body: JSON.stringify({
-        amount_in_cents: amountInCents,
-        currency: "COP",
-        reference: input.reference,
-        customer_email: input.customer.email,
-        // redirect_url: donde Wompi manda al usuario al terminar
-        redirect_url: input.redirectUrl,
-      }),
-    });
+    // Checkout ALOJADO de Wompi: el cliente paga en checkout.wompi.co y nosotros
+    // nunca vemos datos de tarjeta. La firma de integridad (SHA-256 de
+    // referencia + monto + moneda + secreto) impide que alguien altere el monto.
+    const signature = createHash("sha256")
+      .update(`${input.reference}${amountInCents}COP${env.WOMPI_INTEGRITY_KEY}`)
+      .digest("hex");
 
-    if (!res.ok) {
-      // No exponemos el detalle crudo al cliente; se loguea en servidor.
-      throw new Error(`Wompi createPayment falló: ${res.status}`);
-    }
+    // Las claves del query se dejan tal cual (Wompi usa "signature:integrity");
+    // solo se escapan los VALORES.
+    const query = [
+      `public-key=${encodeURIComponent(env.WOMPI_PUBLIC_KEY)}`,
+      `currency=COP`,
+      `amount-in-cents=${amountInCents}`,
+      `reference=${encodeURIComponent(input.reference)}`,
+      `signature:integrity=${signature}`,
+      `redirect-url=${encodeURIComponent(input.redirectUrl)}`,
+    ].join("&");
+
+    // La transacción todavía no existe: Wompi la crea al confirmar el pago y
+    // nos devuelve su id en el query "?id=" del retorno (ver getTransaction).
+    return { redirectUrl: `https://checkout.wompi.co/p/?${query}` };
+  }
+
+  // Consulta el estado real de una transacción (confirmación tras el retorno).
+  async getTransaction(gatewayRef: string): Promise<TransactionSnapshot> {
+    const res = await fetch(`${this.baseUrl}/transactions/${encodeURIComponent(gatewayRef)}`, {
+      headers: { Authorization: `Bearer ${env.WOMPI_PRIVATE_KEY}` },
+    });
+    if (!res.ok) throw new Error(`Wompi getTransaction falló: ${res.status}`);
 
     const data = (await res.json()) as {
-      data: { id: string; redirect_url: string };
+      data: { id: string; reference: string; status: string; amount_in_cents: number };
     };
+    const tx = data.data;
+    const status = STATUS_MAP[tx.status] ?? "ERROR";
 
     return {
-      gatewayRef: data.data.id,
-      redirectUrl: data.data.redirect_url,
+      gatewayRef: tx.id,
+      reference: tx.reference,
+      status,
+      // Wompi envía centavos; convertimos a pesos enteros.
+      amountCop: Math.floor(tx.amount_in_cents / 100),
     };
   }
 
@@ -76,17 +105,12 @@ export class WompiAdapter implements PaymentGateway {
     const tx = parsed.data?.transaction;
     if (!tx) return { valid: false };
 
-    const statusMap: Record<string, WebhookVerification["status"]> = {
-      APPROVED: "APPROVED",
-      DECLINED: "DECLINED",
-      VOIDED: "VOIDED",
-      REFUNDED: "REFUNDED",
-    };
+    const status = WEBHOOK_STATUSES.find((value) => value === tx.status);
 
     return {
       valid: true,
       gatewayRef: tx.id,
-      status: statusMap[tx.status],
+      status,
       // Wompi envía centavos; convertimos a pesos enteros.
       amountInCents: Math.floor(tx.amount_in_cents / 100),
     };

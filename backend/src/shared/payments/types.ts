@@ -30,10 +30,34 @@ export interface CreatePaymentInput {
 }
 
 export interface CreatePaymentResult {
-  /** ID de la transacción en la pasarela */
-  gatewayRef: string;
+  /**
+   * ID de la transacción en la pasarela. Con checkout alojado de Wompi la
+   * transacción se crea DESPUÉS de que el cliente paga, así que aquí suele
+   * venir vacío: el id llega en el query `?id=` del retorno.
+   */
+  gatewayRef?: string;
   /** URL donde el frontend redirige al usuario para completar el pago */
   redirectUrl: string;
+}
+
+/** Estados que Wompi devuelve en una transacción. */
+export type TransactionStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "DECLINED"
+  | "VOIDED"
+  | "REFUNDED"
+  | "ERROR";
+
+/** Instantánea de una transacción consultada a la pasarela. */
+export interface TransactionSnapshot {
+  /** ID de la transacción en la pasarela */
+  gatewayRef: string;
+  /** Referencia interna del pedido (ej: "NA-2026-000123") */
+  reference: string;
+  status: TransactionStatus;
+  /** Monto en COP enteros (la pasarela lo da en centavos). Ej: 185000 */
+  amountCop: number;
 }
 
 export interface WebhookVerification {
@@ -47,6 +71,8 @@ export interface WebhookVerification {
 export interface PaymentGateway {
   readonly name: string;
   createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult>;
+  /** Consulta el estado real de una transacción (confirmación tras el retorno). */
+  getTransaction(gatewayRef: string): Promise<TransactionSnapshot>;
   /** Verifica la firma del webhook para no aceptar notificaciones falsas. */
   verifyWebhook(rawBody: string, signature: string): WebhookVerification;
 }

@@ -183,6 +183,15 @@ export interface PayResponse {
   };
 }
 
+/** Respuesta de POST /api/payments/confirm (nota 21): estado tras el retorno
+ *  de checkout.wompi.co, verificado por el backend contra la API de Wompi. */
+export interface PaymentConfirmResponse {
+  orderId: string;
+  orderNumber: string;
+  paymentStatus: PaymentStatus;
+  orderStatus: OrderStatus;
+}
+
 /** Enum canónico de 7 valores — confirmado por backend (respuesta B.8). */
 export type OrderStatus =
   | "PENDING"
