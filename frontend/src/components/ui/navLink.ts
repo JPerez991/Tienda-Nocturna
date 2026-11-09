@@ -25,3 +25,19 @@ export function estiloNavLink(estado: Estado): string {
       return `${BASE} text-tinta/70 hover:text-tinta hover:underline hover:decoration-tinta/60`;
   }
 }
+
+/**
+ * Mismo enlace estilo nav sobre superficies oscuras (home editorial):
+ * los colores se invierten a crema sin cambiar tamaño ni tipografía.
+ */
+export function estiloNavLinkOscuro(estado: Estado): string {
+  switch (estado) {
+    case "activo":
+      return `${BASE} text-crema underline decoration-crema`;
+    case "deshabilitado":
+      return `${BASE} text-crema/35 cursor-not-allowed`;
+    case "inactivo":
+    default:
+      return `${BASE} text-crema/70 hover:text-crema hover:underline hover:decoration-crema/60`;
+  }
+}

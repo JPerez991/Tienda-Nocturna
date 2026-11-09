@@ -70,13 +70,12 @@ async function renderPagina() {
   );
   await screen.findByRole("button", { name: /Agregar al carrito/ });
   // El effect que registra el observer corre tras el commit; esperamos a que
-  // observe el wrapper del CTA para no depender del timing del find.
+  // observe el wrapper del CTA (marcado con data-cta) para no depender del
+  // timing del find ni de clases de estilo.
   await waitFor(() =>
-    expect(
-      observadores.some((o) => o.el?.className.includes("mt-7")),
-    ).toBe(true),
+    expect(observadores.some((o) => o.el?.hasAttribute("data-cta"))).toBe(true),
   );
-  return observadores.find((o) => o.el?.className.includes("mt-7"));
+  return observadores.find((o) => o.el?.hasAttribute("data-cta"));
 }
 
 beforeEach(() => {

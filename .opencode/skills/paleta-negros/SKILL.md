@@ -19,7 +19,7 @@ intactos.
 | Token | Hex | Rol |
 |---|---|---|
 | `noir` | `#0a0908` | Profundidad máxima: lavados inferiores, bases hondas |
-| `tinta` | `#14100e` | Negro cálido base (marca): banners, header, footer |
+| `tinta` | `#14100e` | Negro cálido base (marca): header, footer, franja de anuncios |
 | `tinta-suave` | `#2a2320` | Hover de superficies oscuras |
 | `grafito` | `#24201d` | Capa media tonal: halos radiales sobre tinta |
 | `humo` | `#3a3431` | Tono más claro: hairlines sobre oscuro |
@@ -40,20 +40,21 @@ intactos.
 5. **Hairlines sobre oscuro**: `bg-humo/60` (no `crema/10` puro cuando se
    quiera un filo más tibio y visible).
 
-## Ejemplo canónico — banner del home (decisión de diseño vigente)
+## Ejemplos canónicos (superficies oscuras vigentes)
 
-- `min-h-[45vh]` (**breve**), contenido **centrado**, **sin CTAs y sin
-  párrafo**: hairline corta `bg-humo/60` + eyebrow + titular (2º línea en
-  itálica acento-claro).
-- Capas: halo `grafito` radial arriba-derecha → lavado `from-noir`
-  ascendente desde abajo → mancha `acento/10` (calidez tenue).
-- `max-w-2xl` en el titular para que no se estire (brevedad visual).
+- **Franja de anuncios superior** (`AnnouncementBar`): `bg-tinta` plano,
+  `h-9`, versalitas 10.5px `tracking-[0.22em]` con mensajes de envío que
+  rotan. No necesita capas: al ser una banda de 36px el plano lee limpio.
+- **Banda lookbook** del home: foto a sangre + velo `bg-tinta/60` (ahí el
+  negro es capa de legibilidad, no fondo).
+- **Footer** y **header**: `bg-tinta` con hairlines `crema/10`.
+- Para paneles oscuros más grandes (futuros): halo `grafito` radial →
+  lavado `from-noir` → mancha `acento/10` (máx. 3 capas).
 
 ## Anti-patrones
 
 - ❌ `#000000` puro en grandes áreas (plano, áspero, sin matiz).
 - ❌ Más de 3 capas tonales por superficie.
 - ❌ Grises neutros fríos sobre `tinta`.
-- ❌ CTAs o párrafos largos en el banner (el usuario los quitó: no
-  reintroducir sin pedirlo).
-- ❌ Fotos en el banner (descartadas por el usuario).
+- ❌ Poner el banner del home en negro: hoy es **blanco con enlaces**
+  informativos (decisión del usuario — no reintroducir el hero oscuro).

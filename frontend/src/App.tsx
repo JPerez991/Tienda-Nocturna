@@ -2,6 +2,8 @@ import { Route, Routes, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { Header } from "./components/layout/Header";
 import { Footer } from "./components/layout/Footer";
+import { AnnouncementBar } from "./components/layout/AnnouncementBar";
+import { WhatsAppButton } from "./components/layout/WhatsAppButton";
 import { HomePage } from "./pages/HomePage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { ProductPage } from "./pages/ProductPage";
@@ -16,6 +18,8 @@ import { AdminOrdersPage } from "./pages/admin/AdminOrdersPage";
 import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
 import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
 import { AdminQuestionsPage } from "./pages/admin/AdminQuestionsPage";
+import { InfoPage } from "./pages/info/InfoPage";
+import { ENVIOS, GARANTIA, PAGOS } from "./pages/info/contenidos";
 import { NotFoundPage } from "./pages/NotFoundPage";
 
 /** Al cambiar de ruta, movemos el foco al contenido y scrolleamos arriba. */
@@ -37,6 +41,7 @@ export default function App() {
         Saltar al contenido
       </a>
       <ScrollAndFocus />
+      <AnnouncementBar />
       <Header />
       <main id="contenido" className="flex-1">
         <Routes>
@@ -49,6 +54,10 @@ export default function App() {
           <Route path="/registro" element={<RegisterPage />} />
           <Route path="/pedidos" element={<OrdersPage />} />
           <Route path="/pedidos/:id" element={<OrderDetailPage />} />
+          {/* Páginas informativas de la tienda (enlazadas desde el banner) */}
+          <Route path="/envios" element={<InfoPage {...ENVIOS} />} />
+          <Route path="/garantia" element={<InfoPage {...GARANTIA} />} />
+          <Route path="/pagos" element={<InfoPage {...PAGOS} />} />
           {/* Panel admin: AdminLayout aplica la guardia de rol ADMIN */}
           <Route
             path="/admin"
@@ -86,6 +95,7 @@ export default function App() {
         </Routes>
       </main>
       <Footer />
+      <WhatsAppButton />
     </div>
   );
 }

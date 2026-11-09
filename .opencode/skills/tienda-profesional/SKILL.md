@@ -33,10 +33,16 @@ skill entren en conflicto en lo **visual**, manda `ui-design`; en lo
 
 ## 1. Home (vitrina)
 
-- Orden de la vitrina: anuncio (envío/pago) → hero → colecciones →
-  destacados → banda editorial → confianza. Un solo CTA primario por sección.
+- Orden de la vitrina (implementado en `HomePage.tsx`): índice de colecciones
+  → hero → banner blanco de información → **La selección** → manifiesto →
+  galería editorial → banda de beneficios → cierre lookbook → confianza.
+  Un solo CTA primario por sección.
 - Destacados = merchandising: máximo 8 piezas; badge de descuento cuando
   `compareAtPrice` lo justifique (etiqueta tinta sólida).
+- Con varios productos empatados en valoración, `sort=featured` devuelve un
+  orden arbitrario: para la vitrina se usa `sort=price-desc` (piezas más
+  elaboradas primero) y se titula **"La selección"**, no "Los más deseados"
+  (no inventar claims de popularidad sin un `featured` curado).
 - Franja de confianza con **2–3 señales reales** (envío discreto, pago Wompi,
   asesoría de talla). Nunca inventar garantías que no existan.
 
@@ -51,11 +57,17 @@ skill entren en conflicto en lo **visual**, manda `ui-design`; en lo
 
 ## 3. Ficha de producto (PDP) — la página que vende
 
-- **Above-the-fold móvil** (obligatorio): imagen, título, precio, valoración
-  y botón "Añadir al carrito" visibles sin hacer scroll en la mayor parte de
-  la pantalla. Si algo falta, compactar la parte superior.
+- **Above-the-fold móvil**: imagen, título y precio asomando en la primera
+  pantalla; el ATC lo garantiza la barra sticky. En Nocturna la foto de ficha
+  va a ancho completo con su ratio intrínseco (decisión cerrada: nunca
+  recortar ni ampliar), así que el ATC no puede caber arriba: por eso el
+  sticky es obligatorio.
 - **CTA único**: un solo "Añadir al carrito" primario (tinta sólida). Nada
   de botones secundarios compitiendo al mismo nivel (Baymard #791).
+- **Nunca un CTA deshabilitado como protagonista**: si el usuario no ha
+  entrado, el botón sólido es un enlace a `/login` ("Inicia sesión para
+  agregar") y una línea explica por qué; deshabilitado solo cuando el
+  producto está agotado. Implementado en `ProductPage`.
 - **Sticky ATC en móvil**: barra inferior fija con precio + Añadir al
   carrito cuando el CTA principal sale de pantalla; con aire suficiente y
   `env(safe-area-inset-bottom)`.

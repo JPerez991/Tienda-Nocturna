@@ -9,12 +9,20 @@ import { Rating } from "./ui/Rating";
  * imagen 4:5 rectangular (sin arco — decisión de marca) con zoom sutil y
  * segunda foto en hover si existe; etiqueta en versalitas, nombre en
  * Playfair con subrayado en hover, precio en Playfair.
- * Entrada animada al hacer scroll (fade + slide-up, respeta
- * prefers-reduced-motion). El "agregar al carrito" vive en el detalle.
+ * `tono="oscuro"` invierte los colores para el home editorial (misma
+ * tipografía y medidas). Entrada animada al hacer scroll (fade + slide-up,
+ * respeta prefers-reduced-motion). El "agregar al carrito" vive en el detalle.
  */
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  tono = "claro",
+}: {
+  product: Product;
+  tono?: "claro" | "oscuro";
+}) {
   const image = product.images[0];
   const segunda = product.images[1];
+  const oscuro = tono === "oscuro";
 
   const ref = useRef<HTMLElement | null>(null);
   const [visible, setVisible] = useState(
@@ -51,10 +59,16 @@ export function ProductCard({ product }: { product: Product }) {
     >
       <Link
         to={`/producto/${product.slug}`}
-        className="block focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-acento"
+        className={`block focus-visible:outline-2 focus-visible:outline-offset-2 ${
+          oscuro ? "focus-visible:outline-acento-claro" : "focus-visible:outline-acento"
+        }`}
         aria-label={`Ver ${product.name}`}
       >
-        <div className="relative aspect-[4/5] overflow-hidden bg-nude">
+        <div
+          className={`relative aspect-[4/5] overflow-hidden ${
+            oscuro ? "bg-tinta-suave" : "bg-nude"
+          }`}
+        >
           {image ? (
             <>
               <img
@@ -76,10 +90,14 @@ export function ProductCard({ product }: { product: Product }) {
           ) : (
             <div
               aria-hidden="true"
-              className="flex size-full items-center justify-center bg-nude"
+              className={`flex size-full items-center justify-center ${
+                oscuro ? "bg-tinta-suave" : "bg-nude"
+              }`}
             >
               <svg
-                className="size-10 stroke-[1.5] text-tibio/70"
+                className={`size-10 stroke-[1.5] ${
+                  oscuro ? "text-crema/40" : "text-tibio/70"
+                }`}
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -97,25 +115,44 @@ export function ProductCard({ product }: { product: Product }) {
 
       <div className="flex flex-1 flex-col gap-1.5 pt-4">
         {product.category && (
-          <span className="etiqueta">{product.category.name}</span>
+          <span
+            className={`text-[11px] font-semibold uppercase tracking-[0.18em] ${
+              oscuro ? "text-acento-claro/70" : "text-tibio"
+            }`}
+          >
+            {product.category.name}
+          </span>
         )}
-        <h3 className="font-display text-base font-medium leading-snug text-carbon">
+        <h3
+          className={`font-display text-base font-medium leading-snug ${
+            oscuro ? "text-crema" : "text-carbon"
+          }`}
+        >
           <Link
             to={`/producto/${product.slug}`}
-            className="transition-colors hover:text-tinta hover:underline hover:underline-offset-4"
+            className={`underline-offset-4 transition-colors ${
+              oscuro
+                ? "hover:text-acento-claro hover:underline"
+                : "hover:text-tinta hover:underline"
+            }`}
           >
             {product.name}
           </Link>
         </h3>
 
         {product.rating !== undefined && (
-          <Rating rating={product.rating} reviewCount={product.reviewCount} />
+          <Rating
+            rating={product.rating}
+            reviewCount={product.reviewCount}
+            tono={tono}
+          />
         )}
 
         <div className="mt-auto pt-1">
           <Price
             price={product.price}
             compareAtPrice={product.compareAtPrice}
+            tono={tono}
           />
         </div>
       </div>

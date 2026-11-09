@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { buildProductWhere, productRepository } from "./product.repository.js";
 import { AppError } from "../../shared/errors/app-error.js";
+import { sortBySize } from "../../shared/sizes.js";
 import type { ListProductsQuery } from "./product.schemas.js";
 
 // Ordenar por valoración exige el promedio de reseñas, que solo existe como
@@ -135,7 +136,9 @@ export const productService = {
       images: product.images,
       rating: roundRating(avg),
       reviewCount: ratings.length,
-      variants: product.variants.map((v) => ({
+      // Siempre de menor a mayor (S → M → L → XL), sin depender del orden
+      // de inserción en la BD: lo consumen la ficha y el formulario de admin.
+      variants: sortBySize(product.variants).map((v) => ({
         id: v.id,
         sku: v.sku,
         name: v.name,

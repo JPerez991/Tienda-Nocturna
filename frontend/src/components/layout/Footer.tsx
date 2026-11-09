@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
+import { whatsappLink } from "../../config";
 
 export function Footer() {
   return (
-    <footer className="mt-16 bg-tinta text-crema/80">
+    <footer className="bg-tinta text-crema/80">
       <div className="mx-auto max-w-6xl px-4 py-10">
-        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="font-display text-lg font-medium uppercase tracking-[0.3em] text-crema">
               Nocturna
@@ -34,6 +35,39 @@ export function Footer() {
                 <Link to="/carrito" className="hover:text-acento transition-colors">
                   Mi carrito
                 </Link>
+              </li>
+            </ul>
+          </nav>
+
+          <nav aria-label="Información">
+            <h2 className="font-display text-base font-semibold text-crema">
+              Información
+            </h2>
+            <ul className="mt-3 space-y-2 text-sm">
+              <li>
+                <Link to="/envios" className="hover:text-acento transition-colors">
+                  Políticas de envío
+                </Link>
+              </li>
+              <li>
+                <Link to="/garantia" className="hover:text-acento transition-colors">
+                  Garantía y devoluciones
+                </Link>
+              </li>
+              <li>
+                <Link to="/pagos" className="hover:text-acento transition-colors">
+                  Pagos seguros
+                </Link>
+              </li>
+              <li>
+                <a
+                  href={whatsappLink("Hola Nocturna, quiero asesoría con mi compra.")}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-acento transition-colors"
+                >
+                  WhatsApp
+                </a>
               </li>
             </ul>
           </nav>

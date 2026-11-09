@@ -47,7 +47,20 @@ export function registerErrorHandler(app: FastifyInstance) {
       });
     }
 
-    // 5) Cualquier otro error: loguear en servidor, responder genérico.
+    // 5) Errores de Fastify con código 4xx (rate-limit 429, cuerpo mal formado…)
+    if (
+      typeof error.statusCode === "number" &&
+      error.statusCode >= 400 &&
+      error.statusCode < 500
+    ) {
+      return reply.status(error.statusCode).send({
+        statusCode: error.statusCode,
+        error: error.name,
+        message: error.message,
+      });
+    }
+
+    // 6) Cualquier otro error: loguear en servidor, responder genérico.
     _request.log.error(error);
     return reply.status(500).send({
       statusCode: 500,

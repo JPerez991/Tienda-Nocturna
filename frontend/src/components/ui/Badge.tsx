@@ -13,9 +13,11 @@ export function DiscountBadge({ percent }: { percent: number }) {
 export function Badge({
   children,
   tone = "neutral",
+  tono = "claro",
 }: {
   children: ReactNode;
   tone?: "neutral" | "success" | "warning" | "danger" | "info";
+  tono?: "claro" | "oscuro";
 }) {
   const tones = {
     neutral: "bg-tibio/10 text-tibio",
@@ -24,9 +26,19 @@ export function Badge({
     danger: "bg-vino/10 text-vino",
     info: "bg-tinta/10 text-tinta",
   } as const;
+  // Sobre negro, el badge pasa a etiqueta crema sólida o tinte claro: los
+  // tonos pastel del tema claro no alcanzan contraste sobre noir.
+  const tonesOscuro = {
+    neutral: "bg-crema/10 text-crema/80",
+    success: "bg-crema text-tinta",
+    warning: "bg-acento-claro/15 text-acento-claro",
+    danger: "bg-vino text-crema",
+    info: "bg-crema/10 text-crema/80",
+  } as const;
+  const mapa = tono === "oscuro" ? tonesOscuro : tones;
   return (
     <span
-      className={`inline-flex items-center gap-1  px-3 py-1 text-xs font-semibold ${tones[tone]}`}
+      className={`inline-flex items-center gap-1 px-3 py-1 text-xs font-semibold ${mapa[tone]}`}
     >
       {children}
     </span>

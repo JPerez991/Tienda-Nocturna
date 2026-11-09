@@ -38,7 +38,8 @@ export function IconAsesoria({ className = CLASE_BASE }: IconoProps) {
 }
 
 /** Franja de confianza del home (fondo nude, 3 señales reales). */
-export function TrustFranja() {
+export function TrustFranja({ tono = "claro" }: { tono?: "claro" | "oscuro" }) {
+  const oscuro = tono === "oscuro";
   const items = [
     { Icon: IconEnvio, title: "Envío discreto", desc: "Empaque neutro, sin logotipos." },
     { Icon: IconSeguro, title: "Pago seguro", desc: "Wompi procesa tu pago cifrado." },
@@ -48,12 +49,16 @@ export function TrustFranja() {
     <>
       {items.map(({ Icon, title, desc }) => (
         <div key={title} className="flex items-start gap-4">
-          <span className="mt-0.5 text-tinta">
+          <span className={`mt-0.5 ${oscuro ? "text-acento-claro" : "text-tinta"}`}>
             <Icon />
           </span>
           <div>
-            <p className="font-semibold text-carbon">{title}</p>
-            <p className="text-sm text-tibio">{desc}</p>
+            <p className={`font-semibold ${oscuro ? "text-crema" : "text-carbon"}`}>
+              {title}
+            </p>
+            <p className={`text-sm ${oscuro ? "text-crema/70" : "text-tibio"}`}>
+              {desc}
+            </p>
           </div>
         </div>
       ))}
@@ -62,7 +67,14 @@ export function TrustFranja() {
 }
 
 /** Fila compacta junto al ATC de la ficha de producto (2–3 señales). */
-export function TrustInline({ className = "" }: { className?: string }) {
+export function TrustInline({
+  className = "",
+  tono = "claro",
+}: {
+  className?: string;
+  tono?: "claro" | "oscuro";
+}) {
+  const oscuro = tono === "oscuro";
   const items: Array<[ReactNode, string]> = [
     [<IconEnvio key="e" className="size-4 shrink-0 stroke-[1.5]" />, "Envío discreto"],
     [<IconSeguro key="s" className="size-4 shrink-0 stroke-[1.5]" />, "Pago seguro con Wompi"],
@@ -71,11 +83,13 @@ export function TrustInline({ className = "" }: { className?: string }) {
   return (
     <ul
       role="list"
-      className={`flex flex-wrap gap-x-5 gap-y-2 text-xs text-tibio ${className}`}
+      className={`flex flex-wrap gap-x-5 gap-y-2 text-xs ${
+        oscuro ? "text-crema/60" : "text-tibio"
+      } ${className}`}
     >
       {items.map(([icon, label]) => (
         <li key={label} className="flex items-center gap-1.5">
-          <span className="text-tinta" aria-hidden="true">
+          <span className={oscuro ? "text-acento-claro" : "text-tinta"} aria-hidden="true">
             {icon}
           </span>
           {label}

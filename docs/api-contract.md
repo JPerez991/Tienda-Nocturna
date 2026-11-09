@@ -349,7 +349,114 @@ usuario (**11 fotos → 11 productos**; la 11ª es `.avif`). Cómo quedó resuel
   El usuario tenía previstas **2** fotos nuevas, pero la **2ª aún no llegó**: si la aporta,
   se le sumará un producto 12 al seed con su foto.
 
+### 21. `sort=featured` necesita una señal de curaduría real — 2026-11-09
+El home abre con **"La selección"** (8 piezas). Hoy no puede usar `sort=featured`
+porque, con las reseñas de demostración empatadas (casi todas 5.0), el orden que
+devuelve es efectivamente arbitrario: la grilla abría con la foto rosa
+`11_peonia.avif` y rompía la secuencia tonal del home noir. Mientras no exista
+curaduría, el frontend usa `GET /api/products?limit=8&sort=price-desc`
+(mayor valor primero) — **no es un "featured" real, es un apaño estético**.
+
+Pedido (no urgente, no bloquea): una señal explícita de merchandising.
+Opción que prefiero (mínima y compatible):
+- Campo opcional `featured` (boolean) o `featuredOrder` (int nullable) en
+  `Product`, editable desde el panel admin.
+- `sort=featured` ordena por `featuredOrder asc` (nulls al final) y luego por
+  `price desc`. Sin productos marcados, la respuesta debe ser **determinista**
+  (nunca el orden de inserción de Postgres).
+- Exponerlo en `ProductInput` para que el admin pueda curarlo.
+
+Mientras tanto, el frontend sigue con `price-desc` y el título "La selección"
+(no decimos "Los más deseados" porque no podemos probarlo con datos).
+
+### 21-bis. Detalle cosmético del seed: comillas rectas en los nombres — 2026-11-09
+Los nombres del seed usan comillas rectas: `Kimono Seda "Vega"`,
+`Body Encaje "Ébano"`. En la ficha y en las tarjetas se ven como `"` de teclado
+y afean el titular tipográfico. Sugerencia: usar comillas tipográficas
+(`“Vega”`, `“Ébano”`) en `prisma/seed.ts`. Es solo copy; no cambia el contrato.
+
+### 22. Requisitos para PUBLICAR (Railway) — 2026-11-09
+
+El despliegue acordado es **Vercel (frontend) + Railway (API + PostgreSQL)**.
+El frontend ya está preparado: `frontend/vercel.json` reescribe `/api/*` hacia el
+backend, así que **el navegador ve la API como mismo origen** y la cookie
+`token` (`SameSite=Lax`) sigue funcionando. Esto evita CORS y las restricciones
+de cookies de terceros de Safari/iOS. La guía completa está en `docs/DEPLOY.md`.
+
+Con ese esquema, el backend **debe** cumplir esto (hoy no lo cumple):
+
+1. **`trustProxy` en Fastify** — *bloqueante*.
+   Detrás de la reescritura de Vercel, todas las peticiones llegan desde la misma
+   IP (la del proxy). Hoy `buildApp()` no activa `trustProxy`, así que:
+   - `@fastify/rate-limit` (100/min **por IP**) contaría todo el tráfico del
+     mundo como una sola IP → a las 100 peticiones por minuto el sitio empieza a
+     devolver `429` a todos los usuarios.
+   - `request.ip` no es la del cliente, y `request.protocol` siempre será `http`
+     aunque el usuario esté en HTTPS.
+   Pedido: `Fastify({ logger, trustProxy: true })` en `src/app.ts` y verificar que
+   `rate-limit` use la IP real (`X-Forwarded-For`).
+
+2. **`COOKIE_SECURE` no se parsea bien** — *bloqueante de seguridad*.
+   `z.coerce.boolean()` sobre el string `"false"` devuelve `true` (`Boolean("false")`
+   es `true`), así que hoy es imposible apagar la cookie segura, y el valor del
+   `.env` es engañoso. Pedido:
+   `z.enum(["true","false"]).default("false").transform(v => v === "true")`
+   (o equivalente) y documentar que en producción va `"true"`.
+
+3. **Arranque en producción con la base de datos** — *bloqueante*.
+   El repo **no tiene `prisma/migrations/`** (la base se creó con `db push`), y
+   `package.json` solo expone `db:migrate` (`migrate dev`, que no sirve en prod).
+   Pedido: un script de arranque que prepare el esquema antes de levantar el
+   servidor, por ejemplo `"start:prod": "prisma db push --accept-data-loss && node dist/server.js"`,
+   o bien generar migraciones y usar `prisma migrate deploy`. Railway necesita
+   además `prisma generate` en el build (ya está previsto en `docs/DEPLOY.md`).
+
+4. **Logs en producción** — recomendable.
+   `logger: env.NODE_ENV === "development"` deja el servidor ciego en prod. Con
+   `trustProxy` activo y `logger: true` (JSON de pino) los `429`, los webhooks de
+   Wompi y los `500` se pueden diagnosticar desde los logs de Railway.
+
+5. **URLs y secretos** — sin cambios de código, pero crítico al desplegar:
+   `CORS_ORIGIN` pasa a ser el dominio público (es también la base del
+   `redirectUrl` de Wompi, y su WAF devuelve `403` si contiene `localhost`);
+   `JWT_SECRET` debe ser **nuevo** (no el de desarrollo); las cuatro llaves de
+   Wompi pasan a `pub_prod_`/`priv_prod_`/`prod_events_`/`prod_integrity_` con
+   `WOMPI_ENV=production`; el webhook público queda en
+   `https://<dominio>/api/payments/webhook/wompi`.
+
+6. **Seed**: las fotos del catálogo son relativas (`/images/…`) y viven en
+   `frontend/public/images`, así que las sirve Vercel. No hay subida de archivos,
+   nada que persistir en disco. Ojo: correr `prisma db seed` en producción
+   sobrescribe datos reales.
+
+**Estado (BACKEND, 2026-11-09): implementado sin cambios de contrato.**
+- `trustProxy: true` en `buildApp()` → `request.ip` sale de `X-Forwarded-For` y
+  el rate-limit sigue siendo por cliente (100/min), no global.
+- `COOKIE_SECURE` se parsea explícitamente como `"true"`/`"false"`.
+- Nuevo script `start:prod` = `prisma db push --accept-data-loss && node dist/server.js`;
+  `build` ahora ejecuta `prisma generate && tsc`; la CLI `prisma` pasó a
+  `dependencies` para existir en runtime.
+- Logger JSON (pino) activo también en producción (nivel `info`).
+- `/health` es un chequeo de vida (sin auth, misma respuesta) y sirve como
+  healthcheck de Railway. Ver `docs/DEPLOY.md`.
+
 ## Notas para FRONTEND (las escribe el BACKEND)
+
+### Nota. TALLAS ORDENADAS DE MENOR A MAYOR — 2026-11-08
+
+**Qué garantizo**: en `GET /api/products/:slug` (y por lo tanto en el detalle que usa el
+formulario admin), `variants[]` viene **siempre ordenado de menor a mayor**, sin importar el orden
+de inserción en la BD: `XXS → XS → S → M → L → XL → 2XL → 3XL`. Las tallas numéricas (si algún
+producto las usa) van ascendentes y, si las hubiera, las no reconocidas quedan al final conservando
+su orden relativo.
+
+**Lo que NO necesito del FRONTEND**: nada. Es un cambio solo del backend (`shared/sizes.ts` →
+`sortBySize`, aplicado en `product.service.detail`). Puedes pintar `product.variants` tal cual
+llegue, sin ordenar tú.
+
+**Por qué**: el orden anterior era el de inserción en la BD, que depende de cómo se haya creado el
+producto. Con esto el selector de tallas de la ficha y el formulario de variantes del panel quedan
+predecibles para cualquier producto nuevo.
 
 ### Nota. CHECKOUT ALOJADO DE WOMPI + CONFIRMACIÓN POR RETORNO — 2026-11-02
 
@@ -538,7 +645,7 @@ Detalle completo:
   "variants": [{ "id": "cuid", "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000, "stock": 5 }]
 }
 ```
-El `price` de cada variante es su precio efectivo (propio, o el base del producto si no tiene sobrecosto). Errores: `404` producto no encontrado.
+El `price` de cada variante es su precio efectivo (propio, o el base del producto si no tiene sobrecosto). `variants` viene **ordenado de menor a mayor** (XXS → XS → S → M → L → XL → 2XL → 3XL; ver nota del 2026-11-08 en "Notas para FRONTEND"). Errores: `404` producto no encontrado.
 
 ---
 

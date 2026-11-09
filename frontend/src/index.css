@@ -24,7 +24,7 @@
   --color-humo: #3a3431; /* tono claro: hairlines sobre oscuro */
 
   --font-display: "Playfair Display", Georgia, "Times New Roman", serif;
-  --font-banner: "Bodoni Moda", "Playfair Display", Georgia, serif; /* titular del banner (didone de moda) */
+  --font-banner: "Bodoni Moda", "Playfair Display", Georgia, serif; /* banner de información (didone de moda) */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
@@ -96,5 +96,72 @@ footer :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   50% {
     opacity: 1;
     transform: translateY(-3px);
+  }
+}
+
+/* Selección de texto: ivory + tinta (superficie del navegador con sistema) */
+::selection {
+  background: var(--color-acento-claro);
+  color: var(--color-tinta);
+}
+
+/* Focos dentro de superficies oscuras del home y del banner blanco.
+   Van después de la regla base y con especificidad de atributo para
+   ganarle a las utilidades de Tailwind (que están en capas). */
+[data-tema="oscuro"] {
+  /* Controles nativos (select, buscador, scrollbars) en versión oscura */
+  color-scheme: dark;
+}
+[data-tema="oscuro"] :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  @apply outline-crema;
+}
+[data-tema="claro"] :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  @apply outline-tinta;
+}
+
+/* Banda de beneficios en movimiento (marquee) */
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.marquee-track {
+  animation: marquee 44s linear infinite;
+}
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@media (hover: hover) {
+  .marquee-mask:hover .marquee-track {
+    animation-play-state: paused;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+}
+
+/* Franja de anuncios: fundido breve al cambiar de mensaje */
+.anuncio {
+  animation: anuncio-entra 500ms ease-out both;
+}
+@keyframes anuncio-entra {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .anuncio {
+    animation: none;
   }
 }

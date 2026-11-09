@@ -7,6 +7,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
+  /** Superficie donde se pinta el botón: invertimos el primario en oscuro. */
+  tono?: "claro" | "oscuro";
 }
 
 const variants: Record<Variant, string> = {
@@ -18,6 +20,15 @@ const variants: Record<Variant, string> = {
   ghost: "bg-transparent text-tinta hover:bg-tinta/5",
   danger:
     "bg-vino text-crema hover:bg-vino-claro disabled:bg-vino/50",
+};
+
+/** Mismo botón sobre superficies oscuras: crema sólido, tinta en el texto. */
+const variantsOscuro: Record<Variant, string> = {
+  primary:
+    "bg-crema text-tinta hover:bg-acento-claro disabled:bg-crema/10 disabled:text-crema/45",
+  secondary: "bg-crema/10 text-crema hover:bg-crema/20 disabled:opacity-50",
+  ghost: "bg-transparent text-crema hover:bg-crema/10",
+  danger: "bg-vino text-crema hover:bg-vino-claro disabled:bg-vino/50",
 };
 
 const sizes: Record<Size, string> = {
@@ -32,15 +43,17 @@ export function Button({
   size = "md",
   loading = false,
   disabled,
+  tono = "claro",
   className = "",
   children,
   ...rest
 }: ButtonProps) {
+  const estilos = tono === "oscuro" ? variantsOscuro : variants;
   return (
     <button
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex items-center justify-center gap-2 uppercase tracking-[0.15em] font-semibold transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60 ${variants[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 uppercase tracking-[0.15em] font-semibold transition-colors duration-200 disabled:pointer-events-none disabled:opacity-60 ${estilos[variant]} ${sizes[size]} ${className}`}
       {...rest}
     >
       {loading && (

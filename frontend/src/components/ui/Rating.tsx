@@ -1,19 +1,30 @@
 interface RatingProps {
   rating?: number;
   reviewCount?: number;
+  /** Tono de la superficie donde vive la valoración. */
+  tono?: "claro" | "oscuro";
 }
 
 /** Estrellas accesibles: valor numérico visible + aria-label. */
-export function Rating({ rating, reviewCount }: RatingProps) {
+export function Rating({ rating, reviewCount, tono = "claro" }: RatingProps) {
   if (rating === undefined) return null;
   const rounded = Math.round(rating);
+  const oscuro = tono === "oscuro";
   return (
     <div className="flex items-center gap-1.5 text-sm">
       <span aria-hidden="true" className="flex">
         {[1, 2, 3, 4, 5].map((n) => (
           <svg
             key={n}
-            className={`size-4 ${n <= rounded ? "text-acento" : "text-tibio/30"}`}
+            className={`size-4 ${
+              n <= rounded
+                ? oscuro
+                  ? "text-acento-claro"
+                  : "text-acento"
+                : oscuro
+                  ? "text-crema/25"
+                  : "text-tibio/30"
+            }`}
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -21,9 +32,15 @@ export function Rating({ rating, reviewCount }: RatingProps) {
           </svg>
         ))}
       </span>
-      <span className="font-semibold text-carbon">{rating.toFixed(1)}</span>
+      <span
+        className={`font-semibold ${oscuro ? "text-crema" : "text-carbon"}`}
+      >
+        {rating.toFixed(1)}
+      </span>
       {reviewCount !== undefined && (
-        <span className="text-tibio">({reviewCount})</span>
+        <span className={oscuro ? "text-crema/60" : "text-tibio"}>
+          ({reviewCount})
+        </span>
       )}
     </div>
   );

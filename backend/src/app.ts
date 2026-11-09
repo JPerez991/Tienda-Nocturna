@@ -18,7 +18,15 @@ import { questionRoutes } from "./modules/questions/question.routes.js";
 // Separado de server.ts para poder testear la app sin escuchar puertos.
 export async function buildApp() {
   const app = Fastify({
-    logger: env.NODE_ENV === "development",
+    // Logs JSON (pino) en dev y producción; silenciados solo en tests.
+    // Sin logs en producción no se pueden diagnosticar 429, webhooks ni 500.
+    logger:
+      env.NODE_ENV === "test"
+        ? false
+        : { level: env.NODE_ENV === "production" ? "info" : "debug" },
+    // Detrás del proxy de Vercel/Railway: request.ip sale de X-Forwarded-For
+    // (rate-limit por cliente real) y request.protocol de X-Forwarded-Proto.
+    trustProxy: true,
   });
 
   // Seguridad primero.

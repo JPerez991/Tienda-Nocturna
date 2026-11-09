@@ -18,4 +18,9 @@ describe("Price", () => {
     render(<Price price={180000} />);
     expect(screen.queryByText(/−\d+%/)).not.toBeInTheDocument();
   });
+
+  it("invierte el color del precio sobre superficies oscuras", () => {
+    render(<Price price={180000} tono="oscuro" />);
+    expect(screen.getByLabelText("Precio: $ 180.000")).toHaveClass("text-crema");
+  });
 });

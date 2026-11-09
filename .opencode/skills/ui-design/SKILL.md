@@ -74,6 +74,10 @@ Reglas:
   pestañas admin, stepper de cantidad, miniaturas de imagen. La selección
   se marca con **masa tinta sólida** (activo) o cambio de fondo (hover),
   nunca con un contorno.
+- **Estados vacío / error / carga**: **sin marco y sin caja** (se probó el
+  rectángulo punteado y se retiró). Se componen centrados con aire (`py-14/16`),
+  icono a trazo, `h3` en Playfair y una acción de texto subrayada. El icono y el
+  color (vino en error) ya comunican el estado; un borde alrededor es decoración.
 - **Estilo nav (helper `estiloNavLink` en `ui/navLink.ts`)**: fila de
   Colecciones (home), chips de categoría del catálogo ("Todas, Bodys,
   Conjuntos…") y **selector de tallas** de la ficha son
@@ -115,23 +119,41 @@ Reglas:
   separados por hairlines, acción de sesión en versalitas y bloqueo de
   scroll del body (`document.body.overflow`).
 
-### Patrón Hero editorial (página de inicio)
-- **Banner BREVE, CENTRADO y SIN CTAs (decisiones explícitas del usuario)**:
-  `min-h-[45vh]`, contenido centrado (`items-center` + `text-center`),
-  **sin foto, sin párrafo y sin botones**: hairline corta `bg-humo/60` +
-  eyebrow (acento-claro) + titular `max-w-2xl` en **Bodoni Moda**
-  (`font-banner`, token nuevo; didone de moda cargada en Google Fonts) con
-  **color blanco puro `text-white`** en ambas partes (regular + itálica).
-  El resto del sitio sigue en Playfair Display (`font-display`).
-  Todo el peso lo lleva la tipografía y el color.
-- **Color compuesto por capas** (tokens de la skill `paleta-negros`):
-  halo `radial-gradient(… var(--color-grafito) …)` arriba-derecha →
-  lavado `from-noir/90 → transparent` desde la base → mancha
-  `bg-acento/10 blur-[110px]`. Máximo 3 capas; nunca `#000` plano ni
-  grises fríos. *(Se probaron: foto de la API, foto manual, 85vh, CTAs,
-  párrafo — todo descartado; no reintroducir sin pedirlo.)*
-- Titular Playfair **peso medio** (`font-medium`); sobre este fondo solo
-  texto `crema`/`acento-claro` (contraste AA).
+### Barra de anuncios superior
+- Franja fina **encima del header** (queda fuera del sticky: se va al
+  hacer scroll, el header permanece): `bg-tinta text-crema`, altura fija
+  `h-9`, versalitas `text-[10.5px] tracking-[0.22em]`, mensajes cortos
+  centrados de **envíos/confianza** (ej. "Envíos a todo Colombia").
+- Rotan cada **5 s** con fundido (`.anuncio` en `index.css`) y
+  `prefers-reduced-motion` deja fijo el primero. Máximo 3 mensajes; sin
+  `aria-live` (es decorativo, no debe interrumpir al lector de pantalla).
+
+### Patrón Banner de información (página de inicio)
+- **Banner BLANCO con ENLACES a la información de la tienda (petición
+  explícita del usuario)** — reemplaza al hero de campaña: `bg-white`,
+  hairline inferior, `nav aria-label="Información de la tienda"` centrado
+  con **Políticas de envío → /envios**, **Garantía y devoluciones →
+  /garantia** y **Pagos seguros → /pagos**.
+- Enlaces en **Bodoni Moda** (`font-banner`, 18–20px) color `carbon`,
+  `min-h-11` (target ≥44px) y subrayado fino en hover; separados por
+  hairlines `h-4 w-px bg-tinta/15` (ocultas en móvil, donde se apilan).
+- El `h1` queda **solo para lectores de pantalla y SEO** (`sr-only`:
+  "Nocturna — lencería premium en Colombia").
+- *(Descartados por el usuario, no reintroducir sin pedirlo: foto, 85vh,
+  45vh, CTAs, párrafo, fondo tinta con capas de negro y titular de
+  campaña.)*
+
+### Contacto flotante (WhatsApp)
+- Botón **cuadrado 48×48 tinta** fijo abajo-derecha
+  (`right-4 bottom-[calc(1rem_+_env(safe-area-inset-bottom))]`), glifo
+  oficial de WhatsApp **a trazo 1.5**, hover `bg-tinta-suave`,
+  `aria-label="Chatea con nosotros por WhatsApp"`, `target="_blank"` +
+  `rel="noopener noreferrer"`.
+- `z-[35]`: por encima de la barra sticky de compra (z-30) y por debajo
+  del header/drawer (z-40) para no tapar el menú móvil. La barra sticky de
+  la ficha reserva `pr-14 pb-3` para que nunca se superpongan.
+- El número vive en **`src/config.ts`** (o `VITE_WHATSAPP_NUMERO` en
+  `.env`), nunca hardcodeado en componentes.
 
 ### Banda lookbook (a sangre, opcional)
 - Sección full-bleed entre bloques del home: imagen real de la API +
@@ -163,10 +185,12 @@ Reglas:
   ampliación 1.000; paisaje 652 → 407, reescalado). Fotos futuras de mayor
   resolución en la misma carpeta el cap las reduce → sigue nítida. Las
   miniaturas (64px) sí mantienen `object-cover`.
-- **Toolbar del catálogo**: buscador a la izquierda + **selector de orden**
-  a la derecha (`?sort=` del contrato: Más recientes, Destacados, Precio ↑,
-  Precio ↓, Mejor valorados) sincronizado con la URL. El select es campo de
-  formulario → **conserva el borde**.
+- **Toolbar del catálogo**: solo **buscador** (`max-w-lg`, campo con borde →
+  **conserva el marco**) y a su lado el botón "Buscar" como única masa sólida.
+  El **selector de orden se retiró a petición del usuario** (no reintroducirlo
+  sin pedirlo): el parámetro `?sort=` del contrato se sigue leyendo de la URL
+  porque los enlaces del home lo usan (`price-desc`), pero no hay control
+  visible.
 - **Botón primario**: `bg-tinta text-crema`, **esquinas rectas y plano**,
   texto en versalitas (uppercase, `tracking-[0.15em]`, 11–14px), hover
   `bg-tinta-suave`; sin sombra ni elevación.
@@ -191,3 +215,111 @@ Reglas:
 
 ## Formato de precios (Colombia)
 - COP sin decimales: `$ 120.000` (punto de miles). Nunca el símbolo solo.
+
+## Home editorial oscuro (implementado — patrón vigente)
+
+El **home** es la única superficie totalmente oscura. El **catálogo es mixto**
+(banda noir + grilla crema) y la ficha de producto, el carrito, el checkout, la
+cuenta y el admin van en crema. El usuario pidió explícitamente "no todo en
+negro": el negro enmarca y el crema deja respirar las fotos. Cualquier
+componente compartido que se use en ambos mundos expone
+`tono?: "claro" | "oscuro"` (por defecto `claro`, para no tocar el resto de la
+app).
+
+- **Orden de secciones (cerrado, no reordenar sin pedirlo)**:
+  índice de colecciones → `Hero` → `InfoBand` (banner blanco) → `La selección`
+  → `Manifesto` → `GalleryScroll` → `Marquee` → `LookbookClose` → confianza →
+  footer.
+- El **banner blanco va después del hero** — decisión móvil: si va antes,
+  empuja el `h1` bajo el pliegue.
+- **`Hero`**: tipografía a la izquierda (Bodoni `max-w-[13ch]`, clamp
+  2.7→4.6rem) y foto 06 a sangre en la mitad derecha con parallax de 8%;
+  móvil: foto 52svh arriba y `h1` visible en la primera pantalla. **Prohibido**
+  reintroducir: hero de 45vh/85vh, foto centrada como fondo con titular
+  encima, CTAs múltiples o párrafo largo.
+- **`InfoBand`**: solo los 3 enlaces de servicio (`/envios`, `/garantia`,
+  `/pagos`), blancos, en Bodoni, con `data-tema="claro"` para que el foco sea
+  tinta. Sin titular de campaña ni foto (petición explícita del usuario).
+- **`La selección`** (antes "Los más deseados"): `GET /api/products?limit=8&sort=price-desc`
+  — el `featured` del contrato ordena por valoración y con las reseñas de
+  demostración empatadas devolvía un orden arbitrario que abría la grilla con
+  la foto rosa `11_peonia`. Precio descendente = piezas más elaboradas
+  primero y una secuencia tonal coherente con el noir. 8 piezas escritorio,
+  4 en móvil (`hidden lg:block` desde la quinta).
+- **`GalleryScroll`**: único momento coreografiado (craft floor: uno por
+  página). Escritorio `sticky` + sección de `240vh` que traduce el `transform`
+  del carril con el progreso del scroll y una hairline de progreso; móvil,
+  carril nativo con `snap`; con `prefers-reduced-motion` se sustituye por una
+  rejilla estática. Nunca movimiento obligado.
+- **`Marquee`**: banda infinita de beneficios (44s, se pausa en hover, texto
+  real en `sr-only`, máscara en los bordes). Con movimiento reducido queda una
+  línea estática.
+- **`LookbookClose`**: foto 05 a sangre con velo de noir y una frase + enlace
+  subrayado. El CTA sólido vive solo en el hero.
+- **Superficies**: `noir` (capa base) para las secciones y `tinta` para el
+  chrome (header, franja de colecciones, marquee); separación siempre por
+  hairlines `crema/10`, jamás por sombras.
+- **Contraste**: los textos secundarios usan `crema/70` o `crema/60` sobre
+  noir (≥4.5:1); nunca grises.
+- **`data-tema="oscuro"`** en el contenedor del home fija el anillo de foco en
+  crema; `data-tema="claro"` hace lo propio en el banner blanco.
+- **Sin animación al hover de la foto**: el zoom sutil de `ProductCard`
+  (`scale-[1.04]`) se mantiene; no añadir parallax por tarjeta.
+
+### Catálogo mixto: banda noir + grilla crema (implementado — patrón vigente)
+
+El catálogo **no es una página negra**: se parte en dos superficies. Arriba una
+**banda noir** que enlaza con el header y concentra la navegación; debajo la
+**grilla sobre crema**, donde las fotos se leen sin competir con el fondo. Es la
+respuesta a "no quiero todo en negro, juega con negro y crema".
+
+- **Banda noir** (`data-tema="oscuro"` + `bg-noir`): `h1` en Bodoni, párrafo
+  `crema/70`, buscador + filtros de categoría. Sin hairline inferior:
+  el corte al crema ya separa (una línea extra aquí sería un marco).
+- **Grilla crema** (fuera del `data-tema`): contador en versalitas `tibio`,
+  `ProductCard` claro (sin `tono`), paginación `estiloNavLink`.
+- Buscador: **campo de formulario**, conserva su borde (`border-crema/25`,
+  fondo transparente, texto crema). El botón "Buscar" es la única masa sólida
+  de la banda: crema con texto tinta. **Sin selector de orden** (retirado a
+  petición del usuario).
+- Filtros de categoría: `estiloNavLinkOscuro` (versalitas con subrayado). Sin
+  cajas ni chips.
+- `color-scheme: dark` en `[data-tema="oscuro"]` para que el botón de limpiar
+  del buscador y los scrollbars sean oscuros.
+- **Qué NO hacer**: volver a pintar toda la página de noir, ni partir la grilla
+  en dos tonos (mezclar tarjetas claras y oscuras en la misma fila rompe la
+  lectura de precios). Un solo corte horizontal por página.
+
+### Ficha de producto en crema (implementado — decisión del usuario)
+
+- Superficie `bg-crema`; sin `data-tema` (el foco por defecto ya es tinta).
+- Migas de pan en versalitas `tibio`; en móvil se ocultan "Inicio" y la
+  categoría para que quepa en una línea.
+- `h1` en **Bodoni** (`text-tinta`): las páginas llevan Bodoni; Playfair queda
+  para los `h2` de sección.
+- Etiquetas de categoría/talla/legends en versalitas `acento` o `tibio`;
+  tallas con `estiloNavLink`; la guía de tallas es un panel `bg-nude` dentro de
+  un `fieldset` con hairline superior (el `legend` queda en la línea: recurso
+  editorial, no tarjeta).
+- **Nunca un CTA deshabilitado grande en el punto de venta**: sin sesión, el
+  botón sólido (tinta) es un enlace a `/login` ("Inicia sesión para agregar");
+  la barra sticky móvil muestra "Entrar". Deshabilitado solo si está agotado.
+  Una línea explica por qué se pide la cuenta (datos del pedido y de envío).
+- Feedback: éxito `bg-tinta/10 text-tinta`, error `bg-vino/10 text-vino`.
+- **Barra sticky móvil** (`bg-crema/95` + hairline tinta): vive siempre que el
+  CTA principal no esté a la vista, no solo cuando queda por encima — la foto
+  3:4 a ancho completo deja el CTA bajo el pliegue en la primera pantalla.
+  `pr-14` reserva el hueco del botón flotante de WhatsApp.
+- El wrapper del CTA principal lleva `data-cta="principal"`: es el ancla del
+  `IntersectionObserver` del sticky (los tests se apoyan en ese atributo, no en
+  clases de estilo).
+- **No convertir esta página a noir** sin pedido textual: el usuario pidió
+  explícitamente que la ficha sea clara para que la tienda "no sea toda negra".
+
+- **Props de tono en componentes compartidos** (todas por defecto `claro`,
+  para no alterar las páginas crema): `ProductCard`, `Price`, `Rating`,
+  `Badge`, `Button` (`tono="oscuro"` invierte el primario a crema/tinta),
+  `Spinner`, `ErrorState`, `EmptyState`, `TrustFranja`, `TrustInline`.
+  `estiloNavLinkOscuro` es el par oscuro de `estiloNavLink` (mismas medidas).
+
+

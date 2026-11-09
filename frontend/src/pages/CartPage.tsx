@@ -24,7 +24,10 @@ export function CartPage() {
 
   if (!user) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16">
+      <div className="mx-auto max-w-4xl px-4 pt-14 pb-20">
+        <h1 className="mb-8 font-banner text-[clamp(2rem,4vw,2.8rem)] font-medium leading-[1.06] tracking-[-0.01em] text-tinta">
+          Tu carrito
+        </h1>
         <EmptyState
           title="Tu carrito te espera"
           description="Inicia sesión para ver tu carrito y continuar con la compra."
@@ -40,8 +43,8 @@ export function CartPage() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16">
-        <h1 className="mb-6 font-display text-3xl font-bold text-carbon">
+      <div className="mx-auto max-w-4xl px-4 pt-14 pb-20">
+        <h1 className="mb-8 font-banner text-[clamp(2rem,4vw,2.8rem)] font-medium leading-[1.06] tracking-[-0.01em] text-tinta">
           Tu carrito
         </h1>
         <EmptyState
@@ -87,8 +90,8 @@ export function CartPage() {
   const envio = cart.shippingCost ?? (cart.subtotal >= 150000 ? 0 : 5000);
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="mb-6 font-display text-3xl font-bold text-carbon">
+    <div className="mx-auto max-w-5xl px-4 pt-14 pb-20">
+      <h1 className="mb-8 font-banner text-[clamp(2rem,4vw,2.8rem)] font-medium leading-[1.06] tracking-[-0.01em] text-tinta">
         Tu carrito
       </h1>
 
