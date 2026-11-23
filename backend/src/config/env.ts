@@ -12,6 +12,18 @@ const booleanString = z
   .default("false")
   .transform((value) => value === "true");
 
+// Las variables de Google son OPCIONALES: si faltan, el servidor arranca igual
+// y las rutas OAuth responden con un error claro (nunca crashean el proceso).
+// Un valor vacío en .env se trata como "no configurada".
+const optionalNonEmpty = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().min(1).optional(),
+);
+const optionalUrl = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().url().optional(),
+);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().default(8080),
@@ -20,6 +32,14 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, "JWT_SECRET debe tener al menos 32 caracteres"),
   COOKIE_SECURE: booleanString,
   CORS_ORIGIN: z.string().url(),
+
+  // OAuth2 del panel admin (ver módulo auth/google).
+  GOOGLE_CLIENT_ID: optionalNonEmpty,
+  GOOGLE_CLIENT_SECRET: optionalNonEmpty,
+  GOOGLE_REDIRECT_URI: optionalUrl,
+  ADMIN_URL: z.string().url().default("http://localhost:5174"),
+  // Correos allowlist separados por comas. Comparación: trim + lowercase.
+  ADMIN_GOOGLE_EMAILS: z.string().default(""),
 
   WOMPI_PUBLIC_KEY: z.string().min(1),
   WOMPI_PRIVATE_KEY: z.string().min(1),

@@ -63,6 +63,8 @@ enum QuestionStatus {
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
+  // Sub estable de Google (login del panel). Nullable: usuarios existentes.
+  googleSub    String?   @unique
   passwordHash String // nunca texto plano
   firstName    String
   lastName     String

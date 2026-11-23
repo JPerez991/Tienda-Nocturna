@@ -29,6 +29,17 @@
 > que el BACKEND responda la nota 20 y mueva esos campos al contrato canónico;
 > con eso se activan los botones de borrado/historial y se persiste la ficha.
 
+> **Actualización 2026-11-23 (noche, BACKEND):** login de Google para el panel
+> implementado en `backend/src/modules/auth/google/`. Authorization Code + PKCE,
+> JWT en la misma cookie `token` httpOnly allowlist `ADMIN_GOOGLE_EMAILS`.
+> Contrato actualizado en la sección 2 de `docs/api-contract.md` (endpoints
+> `/api/auth/google` y `/api/auth/google/callback`) y nota nueva para FRONTEND.
+> Prisma: `User.googleSub String? @unique`, aplicado con
+> `cd backend && npm run db:push` (repo sin `prisma/migrations/`). Supabase vuelve
+> a responder; los 4 usuarios siguen intactos. Sin secretos versionados. Falta
+> configurar Google Cloud Console (URI de redirect) y las 5 variables en
+> `backend/.env`. No se tocó el repo del panel.
+
 ---
 
 ## 1. Qué se está construyendo ahora

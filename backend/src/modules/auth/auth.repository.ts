@@ -9,6 +9,15 @@ export interface CreateUserData {
   passwordHash: string;
 }
 
+export interface CreateGoogleAdminData {
+  email: string;
+  googleSub: string;
+  firstName: string;
+  lastName: string;
+  // Hash de una contraseña aleatoria: la cuenta solo entra por Google.
+  passwordHash: string;
+}
+
 export const userRepository = {
   findByEmail(email: string) {
     return prisma.user.findUnique({ where: { email } });
@@ -22,7 +31,26 @@ export const userRepository = {
     });
   },
 
+  findByGoogleSub(googleSub: string) {
+    return prisma.user.findUnique({ where: { googleSub } });
+  },
+
   create(data: CreateUserData) {
     return prisma.user.create({ data });
+  },
+
+  // Vincula el sub de Google a un usuario ya existente (o lo promueve a ADMIN
+  // si su correo está en la allowlist).
+  linkGoogleAdmin(id: string, googleSub: string) {
+    return prisma.user.update({
+      where: { id },
+      data: { googleSub, role: "ADMIN" },
+    });
+  },
+
+  createGoogleAdmin(data: CreateGoogleAdminData) {
+    return prisma.user.create({
+      data: { ...data, role: "ADMIN" },
+    });
   },
 };

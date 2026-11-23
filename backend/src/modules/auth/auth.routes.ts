@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { authController } from "./auth.controller.js";
+import { googleRoutes } from "./google/google.routes.js";
 
 // Rutas de autenticación (capa HTTP). Solo enruta al controller.
 export async function authRoutes(app: FastifyInstance) {
@@ -8,4 +9,6 @@ export async function authRoutes(app: FastifyInstance) {
   app.post("/api/auth/logout", authController.logout);
   // /me requiere sesión válida.
   app.get("/api/auth/me", { preHandler: app.authenticate }, authController.me);
+  // Google OAuth2 del panel admin (mismo JWT en cookie httpOnly).
+  await app.register(googleRoutes);
 }

@@ -509,6 +509,27 @@ y la UI cuando el contrato pase a ser canonical (sección 6/8).
 
 ## Notas para FRONTEND (las escribe el BACKEND)
 
+### Nota. LOGIN DE GOOGLE EN EL PANEL — 2026-11-23
+
+**Implementado** (sección 2): `GET /api/auth/google` y
+`GET /api/auth/google/callback`. El botón de Google es un **enlace/navegación**,
+no un `fetch` JSON:
+`/api/auth/google?redirect=/pedidos` (la ruta es relativa al panel). El backend
+devuelve `302` a Google y, al volver, `302` a `${ADMIN_URL}${redirect}` con la
+cookie `token` ya puesta. Tu `AuthContext` no cambia: sigue validando con
+`GET /api/auth/me`.
+
+**Códigos de error en `/login?error=…`** (ya los muestra el panel):
+- `not_configured` → faltan variables de Google en el servidor.
+- `oauth_failed` → state inválido/caducado, cancelación, canje o verificación fallidos.
+- `not_allowed` → correo Google fuera de la allowlist del servidor.
+
+No guardes IDs/secretos de Google en el panel: todo el flujo (incluido el
+`client_secret` y el `code_verifier`) vive en el backend. En Google Cloud Console
+hay que registrar como URI de redireccionamiento autorizado exactamente
+`GOOGLE_REDIRECT_URI` (en local, `http://localhost:8080/api/auth/google/callback`;
+en producción, `https://<dominio-api>/api/auth/google/callback`).
+
 ### Nota. TALLAS ORDENADAS DE MENOR A MAYOR — 2026-11-08
 
 **Qué garantizo**: en `GET /api/products/:slug` (y por lo tanto en el detalle que usa el
@@ -662,6 +683,73 @@ Requiere sesión. Respuesta `200`:
   "lastName": "Gómez", "phone": "3001234567", "role": "CUSTOMER" }
 ```
 `phone` puede ser `null` si el usuario no registró teléfono.
+
+### `GET /api/auth/google` — iniciar login de Google en el panel (OAuth2 + PKCE)
+
+No requiere sesión. Genera un `state` aleatorio y un `code_verifier` PKCE (32 bytes
+cada uno), los guarda en cookies temporales **firmadas** con el secreto de cookies
+del servidor (`google_oauth_state`, `google_oauth_verifier`,
+`google_oauth_redirect`; `Max-Age=600`, `HttpOnly`, `SameSite=Lax`, `secure` según
+`COOKIE_SECURE`) y redirige a Google.
+
+Query: `redirect` (opcional) = ruta **relativa del panel** a la que volver tras el
+login (p. ej. `/pedidos`, `/productos?page=2`). Por defecto `/`. Se rechazan URLs
+absolutas, `//dominio`, barras invertidas y `%2f`/`%5c` (open redirect).
+
+Respuesta `302`:
+`Location: https://accounts.google.com/o/oauth2/v2/auth?client_id=…&redirect_uri=…&response_type=code&scope=openid+email+profile&state=…&code_challenge=…&code_challenge_method=S256&prompt=select_account`
+
+El navegador **nunca** recibe el `client_secret` ni el `code_verifier`.
+
+Errores:
+- `400` `redirect` inválido (intento de open redirect) → JSON `{ statusCode, error, message }`.
+- `503` falta configuración de Google → JSON con `message: "Google login no está configurado en el servidor"`.
+  Si la petición trae `Accept: text/html` (navegador), responde `302` a
+  `${ADMIN_URL}/login?error=not_configured` en lugar de JSON.
+- `429` demasiadas peticiones (10/min por IP; límite específico de estas rutas).
+
+### `GET /api/auth/google/callback` — retorno de Google
+
+No requiere sesión. Valida `state` contra la cookie firmada y borra las tres
+cookies temporales (un solo uso), canjea `code` por tokens en el endpoint de
+Google usando `client_secret` + `code_verifier`, y verifica el ID token con el
+JWKS de Google: issuer `https://accounts.google.com`, audience
+`GOOGLE_CLIENT_ID`, `exp` y `email_verified: true`. Extrae `email` y `sub`.
+
+Query (la envía Google): `code`, `state` y, si el usuario cancela, `error`.
+
+Si el correo está en la allowlist `ADMIN_GOOGLE_EMAILS` (comparación `trim` +
+`toLowerCase`): busca o crea un `User` con `role: "ADMIN"` y guarda `googleSub`
+(si el usuario ya existía se vincula; si es nuevo se crea con una contraseña
+aleatoria imposible de usar). Emite **el mismo JWT** de `POST /api/auth/login` en
+la cookie `token` (mismas opciones `httpOnly` / `secure` / `sameSite`).
+
+Respuesta `302`: `Location: ${ADMIN_URL}${redirect}` (el `redirect` validado).
+
+Errores (todos son `302` a `${ADMIN_URL}/login?error=…`; nunca JSON al navegador):
+- `not_allowed` → el correo **no** está en la allowlist (o la cuenta está inactiva).
+  No se crea sesión ni usuario.
+- `oauth_failed` → `state` ausente/inválido, cookies firmadas corruptas o
+  caducadas, `code` ausente, cancelación, canje rechazado, ID token inválido o
+  error al guardar el usuario. No se filtra el motivo.
+- `not_configured` → faltan variables de Google (idéntico al endpoint anterior;
+  una llamada API sin `Accept: text/html` recibe `503` JSON).
+- `429` → límite de 10/min por IP (JSON estándar de rate limit).
+
+Estas dos rutas no devuelven `401`/`403`: son públicas y la sesión se emite al
+final; los `401`/`403` de siempre aplican a las rutas protegidas por la cookie
+`token` (sección 6).
+
+`state` y las cookies temporales caducan a los 10 minutos. No se registran
+tokens, correos ni secretos en los logs.
+
+Variables del backend (todas opcionales; si falta alguna de Google, las rutas
+responden `503`/`not_configured` pero el servidor arranca normal):
+`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`,
+`ADMIN_URL` (default `http://localhost:5174`) y `ADMIN_GOOGLE_EMAILS` (lista CSV;
+vacía = nadie autorizado). Ver `backend/.env.example`. El repo usa
+`prisma db push` (sin `prisma/migrations/`): tras cambiar el esquema ejecutar
+`cd backend && npm run db:push`.
 
 ---
 

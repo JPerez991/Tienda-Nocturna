@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyRequest } from "fastify";
 import { env } from "./config/env.js";
 import { registerSecurity } from "./shared/plugins/security.js";
 import { registerRawBody } from "./shared/plugins/raw-body.js";
@@ -17,13 +17,25 @@ import { questionRoutes } from "./modules/questions/question.routes.js";
 // Construye la instancia de Fastify con plugins, seguridad y rutas.
 // Separado de server.ts para poder testear la app sin escuchar puertos.
 export async function buildApp() {
+  // Fastify loguea req.url CON querystring por defecto; en el callback de
+  // Google eso filtraría ?code=... (secreto de un solo uso). Se recorta la URL.
+  const loggerOptions =
+    env.NODE_ENV === "test"
+      ? false
+      : {
+          level: env.NODE_ENV === "production" ? "info" : "debug",
+          serializers: {
+            req: (request: FastifyRequest) => ({
+              method: request.method,
+              url: request.raw.url?.split("?")[0] ?? "",
+            }),
+          },
+        };
+
   const app = Fastify({
     // Logs JSON (pino) en dev y producción; silenciados solo en tests.
     // Sin logs en producción no se pueden diagnosticar 429, webhooks ni 500.
-    logger:
-      env.NODE_ENV === "test"
-        ? false
-        : { level: env.NODE_ENV === "production" ? "info" : "debug" },
+    logger: loggerOptions,
     // Detrás del proxy de Vercel/Railway: request.ip sale de X-Forwarded-For
     // (rate-limit por cliente real) y request.protocol de X-Forwarded-Proto.
     trustProxy: true,
