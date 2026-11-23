@@ -6,6 +6,8 @@ import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Field";
 import { Badge } from "../../components/ui/Badge";
 import { ErrorState, Spinner } from "../../components/ui/States";
+import { PlusIcon } from "../../components/ui/Icons";
+import { PageHeader } from "../../components/admin/PageHeader";
 
 /* ============================================================
    Admin › Productos — lista + formulario crear/editar.
@@ -94,7 +96,7 @@ export function AdminProductsPage() {
   const [form, setForm] = useState<FormState>(formVacio);
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ texto: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -154,9 +156,11 @@ export function AdminProductsPage() {
       setForm(aFormulario(detalle));
     } catch {
       // Si el detalle no carga, mantenemos lo básico de la lista y avisamos.
-      setMsg(
-        "No pudimos cargar las variantes del producto; revisa antes de guardar.",
-      );
+      setMsg({
+        texto:
+          "No pudimos cargar las variantes del producto; revisa antes de guardar.",
+        ok: false,
+      });
     }
   }
 
@@ -199,40 +203,64 @@ export function AdminProductsPage() {
     try {
       if (editandoId) await api.admin.updateProduct(editandoId, payload);
       else await api.admin.createProduct(payload);
-      setMsg(editandoId ? "✓ Producto actualizado." : "✓ Producto creado.");
+      setMsg({
+        texto: editandoId ? "Producto actualizado." : "Producto creado.",
+        ok: true,
+      });
       setAbierto(false);
       setReloadKey((k) => k + 1);
     } catch (err) {
-      setMsg(
-        err instanceof ApiError
-          ? err.message
-          : "No pudimos guardar el producto.",
-      );
+      setMsg({
+        texto:
+          err instanceof ApiError
+            ? err.message
+            : "No pudimos guardar el producto.",
+        ok: false,
+      });
     } finally {
       setGuardando(false);
     }
   }
 
-  if (error) return <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />;
-  if (products === null) return <Spinner label="Cargando productos…" />;
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Productos" />
+        <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />
+      </>
+    );
+  }
+
+  if (products === null) {
+    return (
+      <>
+        <PageHeader title="Productos" />
+        <Spinner label="Cargando productos…" />
+      </>
+    );
+  }
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-tibio" role="status">
-          {products.length} {products.length === 1 ? "producto" : "productos"}
-        </p>
-        <Button onClick={abrirNuevo}>+ Nuevo producto</Button>
-      </div>
+      <PageHeader
+        title="Productos"
+        meta={`${products.length} ${products.length === 1 ? "producto" : "productos"}`}
+        action={
+          <Button onClick={abrirNuevo}>
+            <PlusIcon />
+            Nuevo producto
+          </Button>
+        }
+      />
 
       {msg && (
         <p
           role="status"
           className={`mb-4  px-4 py-3 text-sm ${
-            msg.startsWith("✓") ? "bg-tinta/10 text-tinta" : "bg-vino/10 text-vino"
+            msg.ok ? "bg-tinta/10 text-tinta" : "bg-vino/10 text-vino"
           }`}
         >
-          {msg}
+          {msg.texto}
         </p>
       )}
 
@@ -243,7 +271,7 @@ export function AdminProductsPage() {
           className="mb-8 space-y-4  border border-acento/40 bg-white p-5 sm:p-6"
           noValidate
         >
-          <h2 className="font-display text-xl font-semibold text-carbon">
+          <h2 className="text-xl font-semibold text-carbon">
             {editandoId ? "Editar producto" : "Nuevo producto"}
           </h2>
 
@@ -438,47 +466,55 @@ export function AdminProductsPage() {
 
       {/* ---------- Lista ---------- */}
       {products.length === 0 ? (
-        <p className=" border border-dashed border-tibio/30 bg-white/60 px-6 py-14 text-center text-tibio">
-          Aún no hay productos. Crea el primero con el botón superior.
+        <p className="px-6 py-16 text-center text-tibio">
+          Aún no hay productos. Crea el primero con el botón de arriba.
         </p>
       ) : (
         <ul className="space-y-3">
           {products.map((p) => (
             <li
               key={p.id}
-              className="flex flex-wrap items-center gap-4  border border-carbon/5 bg-white p-4"
+              className="border border-tinta/10 bg-white p-4 sm:flex sm:items-center sm:gap-4"
             >
-              <span className="size-14 shrink-0 overflow-hidden  bg-crema">
-                {p.images[0] ? (
-                  <img
-                    src={p.images[0].url}
-                    alt=""
-                    className="size-full object-cover"
-                  />
-                ) : (
-                  <span aria-hidden="true" className="flex size-full items-center justify-center bg-nude">
-                    <svg className="size-7 stroke-[1.5] text-tibio/70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5a2 2 0 1 0-2-2M12 7.5v2L4.5 15.8c-.6.5-.3 1.4.4 1.4h14.2c.7 0 1-.9.4-1.4L12 9.5" />
-                    </svg>
-                  </span>
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-display font-semibold text-carbon">
-                  {p.name}
-                </p>
-                <p className="text-sm text-tibio">
-                  {p.category.name} · /{p.slug}
-                </p>
+              {/* Identidad del producto */}
+              <div className="flex min-w-0 items-center gap-4 sm:flex-1">
+                <span className="size-14 shrink-0 overflow-hidden bg-crema">
+                  {p.images[0] ? (
+                    <img
+                      src={p.images[0].url}
+                      alt=""
+                      className="size-full object-cover"
+                    />
+                  ) : (
+                    <span aria-hidden="true" className="flex size-full items-center justify-center bg-nude">
+                      <svg className="size-7 stroke-[1.5] text-tibio/70" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5a2 2 0 1 0-2-2M12 7.5v2L4.5 15.8c-.6.5-.3 1.4.4 1.4h14.2c.7 0 1-.9.4-1.4L12 9.5" />
+                      </svg>
+                    </span>
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-carbon">{p.name}</p>
+                  <p className="truncate text-sm text-tibio">
+                    {p.category.name} · /{p.slug}
+                  </p>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="font-display font-semibold text-tinta">
+
+              {/* Precio, oferta y acción: fila propia en móvil, al extremo en escritorio */}
+              <div className="mt-3 flex items-center gap-3 border-t border-tinta/10 pt-3 sm:mt-0 sm:border-0 sm:pt-0">
+                <span className="font-semibold text-tinta">
                   {formatCOP(p.price)}
                 </span>
                 {p.compareAtPrice && p.compareAtPrice > p.price && (
                   <Badge tone="warning">Oferta</Badge>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => abrirEditar(p)}>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => abrirEditar(p)}
+                  className="ml-auto underline decoration-tinta/30 underline-offset-4 hover:decoration-tinta sm:ml-0"
+                >
                   Editar
                 </Button>
               </div>

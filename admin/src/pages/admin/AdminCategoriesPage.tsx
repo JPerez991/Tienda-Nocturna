@@ -4,6 +4,8 @@ import type { Category, CategoryInput } from "../../lib/types";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Field";
 import { ErrorState, Spinner } from "../../components/ui/States";
+import { PlusIcon } from "../../components/ui/Icons";
+import { PageHeader } from "../../components/admin/PageHeader";
 
 /* ============================================================
    Admin › Categorías — lista + formulario crear.
@@ -19,7 +21,7 @@ export function AdminCategoriesPage() {
   const [form, setForm] = useState({ name: "", slug: "", imageUrl: "" });
   const [errs, setErrs] = useState<Record<string, string>>({});
   const [guardando, setGuardando] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ texto: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,44 +62,65 @@ export function AdminCategoriesPage() {
     };
     try {
       await api.admin.createCategory(payload);
-      setMsg("✓ Categoría creada.");
+      setMsg({ texto: "Categoría creada.", ok: true });
       setForm({ name: "", slug: "", imageUrl: "" });
       setAbierto(false);
       setReloadKey((k) => k + 1);
     } catch (err) {
-      setMsg(
-        err instanceof ApiError
-          ? err.message
-          : "No pudimos crear la categoría.",
-      );
+      setMsg({
+        texto:
+          err instanceof ApiError
+            ? err.message
+            : "No pudimos crear la categoría.",
+        ok: false,
+      });
     } finally {
       setGuardando(false);
     }
   }
 
-  if (error) return <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />;
-  if (categories === null) return <Spinner label="Cargando categorías…" />;
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Categorías" />
+        <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />
+      </>
+    );
+  }
+  if (categories === null) {
+    return (
+      <>
+        <PageHeader title="Categorías" />
+        <Spinner label="Cargando categorías…" />
+      </>
+    );
+  }
 
   return (
     <>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-tibio" role="status">
-          {categories.length}{" "}
-          {categories.length === 1 ? "categoría" : "categorías"}
-        </p>
-        <Button onClick={() => { setMsg(null); setAbierto((v) => !v); }}>
-          {abierto ? "Cerrar formulario" : "+ Nueva categoría"}
-        </Button>
-      </div>
+      <PageHeader
+        title="Categorías"
+        meta={`${categories.length} ${categories.length === 1 ? "categoría" : "categorías"}`}
+        action={
+          <Button
+            onClick={() => {
+              setMsg(null);
+              setAbierto((v) => !v);
+            }}
+          >
+            {abierto ? "Cerrar formulario" : <><PlusIcon /> Nueva categoría</>}
+          </Button>
+        }
+      />
 
       {msg && (
         <p
           role="status"
           className={`mb-4  px-4 py-3 text-sm ${
-            msg.startsWith("✓") ? "bg-tinta/10 text-tinta" : "bg-vino/10 text-vino"
+            msg.ok ? "bg-tinta/10 text-tinta" : "bg-vino/10 text-vino"
           }`}
         >
-          {msg}
+          {msg.texto}
         </p>
       )}
 
@@ -107,7 +130,7 @@ export function AdminCategoriesPage() {
           className="mb-8 space-y-4  border border-acento/40 bg-white p-5 sm:p-6"
           noValidate
         >
-          <h2 className="font-display text-xl font-semibold text-carbon">
+          <h2 className="text-xl font-semibold text-carbon">
             Nueva categoría
           </h2>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -149,15 +172,15 @@ export function AdminCategoriesPage() {
       )}
 
       {categories.length === 0 ? (
-        <p className=" border border-dashed border-tibio/30 bg-white/60 px-6 py-14 text-center text-tibio">
-          Aún no hay categorías. Crea la primera con el botón superior.
+        <p className="px-6 py-16 text-center text-tibio">
+          Aún no hay categorías. Crea la primera con el botón de arriba.
         </p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
             <li
               key={c.id}
-              className="flex items-center gap-3  border border-carbon/5 bg-white p-4"
+              className="flex items-center gap-3 border border-tinta/10 bg-white p-4"
             >
               <span className="flex size-12 shrink-0 items-center justify-center overflow-hidden  bg-crema">
                 {c.imageUrl ? (
@@ -171,7 +194,7 @@ export function AdminCategoriesPage() {
                 )}
               </span>
               <div className="min-w-0">
-                <p className="truncate font-display font-semibold text-carbon">
+                <p className="truncate font-semibold text-carbon">
                   {c.name}
                 </p>
                 <p className="truncate text-sm text-tibio">/{c.slug}</p>

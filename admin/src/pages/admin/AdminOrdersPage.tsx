@@ -4,6 +4,7 @@ import { formatCOP } from "../../lib/format";
 import type { AdminOrder, OrderStatus } from "../../lib/types";
 import { Badge } from "../../components/ui/Badge";
 import { ErrorState, Spinner } from "../../components/ui/States";
+import { PageHeader } from "../../components/admin/PageHeader";
 
 /** Estados posibles del pedido (confirmar enum con backend — nota 4 del contrato). */
 const ESTADOS: OrderStatus[] = [
@@ -60,10 +61,10 @@ function OrderRow({ order }: { order: AdminOrder }) {
   }
 
   return (
-    <li className=" border border-carbon/5 bg-white p-4 sm:p-5">
+    <li className="border border-tinta/10 bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="font-display text-lg font-semibold text-carbon">
+          <p className="text-lg font-semibold text-carbon">
             {order.orderNumber}
           </p>
           <p className="text-sm text-tibio">
@@ -79,8 +80,10 @@ function OrderRow({ order }: { order: AdminOrder }) {
             })}
           </p>
         </div>
-        <div className="text-right">
-          <p className="font-display text-lg font-semibold text-tinta">
+        {/* Móvil: total a la izquierda y estado a la derecha, en una sola fila.
+            Escritorio: ambos apilados y alineados a la derecha. */}
+        <div className="flex w-full items-center justify-between gap-3 sm:w-auto sm:flex-col sm:items-end sm:justify-start">
+          <p className="text-lg font-semibold text-tinta">
             {formatCOP(order.total)}
           </p>
           <Badge tone={TONOS[status] ?? "neutral"}>{ETIQUETAS[status] ?? status}</Badge>
@@ -159,29 +162,38 @@ export function AdminOrdersPage() {
   }, [reloadKey]);
 
   if (error) {
-    return <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />;
-  }
-  if (orders === null) {
-    return <Spinner label="Cargando pedidos…" />;
-  }
-  if (orders.length === 0) {
     return (
-      <p className=" border border-dashed border-tibio/30 bg-white/60 px-6 py-14 text-center text-tibio">
-        Aún no hay pedidos en la tienda.
-      </p>
+      <>
+        <PageHeader title="Pedidos" />
+        <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />
+      </>
     );
   }
 
   return (
     <>
-      <p className="mb-4 text-sm text-tibio" role="status">
-        {orders.length} {orders.length === 1 ? "pedido" : "pedidos"} en total
-      </p>
-      <ul className="space-y-4">
-        {orders.map((o) => (
-          <OrderRow key={o.id} order={o} />
-        ))}
-      </ul>
+      <PageHeader
+        title="Pedidos"
+        meta={
+          orders
+            ? `${orders.length} ${orders.length === 1 ? "pedido" : "pedidos"} en total`
+            : undefined
+        }
+      />
+
+      {orders === null ? (
+        <Spinner label="Cargando pedidos…" />
+      ) : orders.length === 0 ? (
+        <p className="px-6 py-16 text-center text-tibio">
+          Aún no hay pedidos. Cuando alguien compre, aparece aquí.
+        </p>
+      ) : (
+        <ul className="space-y-4">
+          {orders.map((o) => (
+            <OrderRow key={o.id} order={o} />
+          ))}
+        </ul>
+      )}
     </>
   );
 }

@@ -1,5 +1,8 @@
 # Cómo se comunican los dos agentes (BACKEND ↔ FRONTEND)
 
+> **¿Retomas el proyecto?** Lee antes `docs/ESTADO.md`: dice en qué fase vamos,
+> qué quedó a medias y cuál es la siguiente acción concreta.
+
 Este proyecto tiene **dos "chats" (agentes)** que trabajan en equipo:
 
 ```

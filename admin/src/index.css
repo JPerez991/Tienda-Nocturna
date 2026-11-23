@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Nocturna ADMIN — interfaz propia, separada de la tienda.
+   Misma paleta de marca (tinta, crema, nude) pero otro tono:
+   back-office sobrio, denso y funcional. Sin fotos editoriales,
+   sin hero, sin versalitas decorativas.
+   ============================================================ */
+@theme {
+  --color-tinta: #14100e;
+  --color-tinta-suave: #2a2320;
+  --color-carbon: #2b2422;
+  --color-tibio: #716a64;
+  --color-crema: #faf7f4;
+  --color-nude: #f3ece5;
+  --color-acento: #86715f;
+  --color-acento-claro: #d9cfc3;
+  --color-acento-fondo: #efe8df;
+  --color-vino: #7a2e39;
+  --color-noir: #0a0908;
+
+  --font-banner: "Bodoni Moda", Georgia, serif;
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+body {
+  @apply bg-crema text-carbon font-sans antialiased;
+}
+
+/* En el panel los títulos son de interfaz: sans, no serif.
+   La serif queda solo para el wordmark de la marca. */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    @apply font-sans;
+  }
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  @apply outline-2 outline-offset-2 outline-tinta;
+}
+
+/* Foco crema dentro de la barra lateral oscura */
+.sidebar :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  @apply outline-crema;
+}
+
+.carga-puntos {
+  display: inline-flex;
+  gap: 6px;
+}
+.carga-puntos > span {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  animation: punto-carga 1.2s ease-in-out infinite;
+}
+.carga-puntos > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.carga-puntos > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes punto-carga {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carga-puntos > span {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+::selection {
+  background: var(--color-acento-claro);
+  color: var(--color-tinta);
+}
+
+/* Tablas del panel: scroll horizontal sin romper el layout en móvil */
+.tabla-scroll {
+  overflow-x: auto;
+}
+.tabla-scroll::-webkit-scrollbar {
+  height: 6px;
+}
+.tabla-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--color-acento) 40%, transparent);
+}

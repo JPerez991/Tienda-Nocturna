@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useCart } from "../../context/CartContext";
+import { ADMIN_URL } from "../../config";
 
 /**
  * Enlace de nav en versalitas con subrayado en hover.
@@ -33,6 +34,27 @@ function NavItem({
   );
 }
 
+/** Igual que NavItem, pero para otra aplicación (el panel admin). */
+function NavItemExterno({
+  href,
+  children,
+  onClick,
+}: {
+  href: string;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
+  return (
+    <a
+      href={href}
+      onClick={onClick}
+      className="inline-flex min-h-11 items-center text-[11px] font-semibold uppercase tracking-[0.18em] text-crema/70 underline-offset-[10px] transition-colors hover:text-crema hover:underline"
+    >
+      {children}
+    </a>
+  );
+}
+
 export function Header() {
   const { user, logout } = useAuth();
   const { count } = useCart();
@@ -56,7 +78,9 @@ export function Header() {
             <NavItem to="/">Inicio</NavItem>
             <NavItem to="/catalogo">Catálogo</NavItem>
             {user && <NavItem to="/pedidos">Mis pedidos</NavItem>}
-            {user?.role === "ADMIN" && <NavItem to="/admin">Admin</NavItem>}
+            {user?.role === "ADMIN" && (
+              <NavItemExterno href={ADMIN_URL}>Panel</NavItemExterno>
+            )}
           </nav>
           <button
             onClick={() => setOpen((v) => !v)}
@@ -163,7 +187,6 @@ export function Header() {
               { to: "/", label: "Inicio" },
               { to: "/catalogo", label: "Catálogo" },
               ...(user ? [{ to: "/pedidos", label: "Mis pedidos" }] : []),
-              ...(user?.role === "ADMIN" ? [{ to: "/admin", label: "Admin" }] : []),
             ].map((l) => (
               <li key={l.to} className="border-b border-crema/10">
                 <NavLink
@@ -181,6 +204,17 @@ export function Header() {
                 </NavLink>
               </li>
             ))}
+            {user?.role === "ADMIN" && (
+              <li className="border-b border-crema/10">
+                <a
+                  href={ADMIN_URL}
+                  onClick={() => setOpen(false)}
+                  className="flex min-h-14 items-center font-display text-2xl text-crema transition-colors hover:text-acento-claro"
+                >
+                  Panel
+                </a>
+              </li>
+            )}
           </ul>
           <div className="mt-8">
             {user ? (

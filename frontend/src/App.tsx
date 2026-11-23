@@ -13,11 +13,6 @@ import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { OrdersPage } from "./pages/OrdersPage";
 import { OrderDetailPage } from "./pages/OrderDetailPage";
-import { AdminLayout } from "./components/admin/AdminLayout";
-import { AdminOrdersPage } from "./pages/admin/AdminOrdersPage";
-import { AdminProductsPage } from "./pages/admin/AdminProductsPage";
-import { AdminCategoriesPage } from "./pages/admin/AdminCategoriesPage";
-import { AdminQuestionsPage } from "./pages/admin/AdminQuestionsPage";
 import { InfoPage } from "./pages/info/InfoPage";
 import { ENVIOS, GARANTIA, PAGOS } from "./pages/info/contenidos";
 import { NotFoundPage } from "./pages/NotFoundPage";
@@ -58,39 +53,8 @@ export default function App() {
           <Route path="/envios" element={<InfoPage {...ENVIOS} />} />
           <Route path="/garantia" element={<InfoPage {...GARANTIA} />} />
           <Route path="/pagos" element={<InfoPage {...PAGOS} />} />
-          {/* Panel admin: AdminLayout aplica la guardia de rol ADMIN */}
-          <Route
-            path="/admin"
-            element={
-              <AdminLayout>
-                <AdminOrdersPage />
-              </AdminLayout>
-            }
-          />
-          <Route
-            path="/admin/productos"
-            element={
-              <AdminLayout>
-                <AdminProductsPage />
-              </AdminLayout>
-            }
-          />
-          <Route
-            path="/admin/categorias"
-            element={
-              <AdminLayout>
-                <AdminCategoriesPage />
-              </AdminLayout>
-            }
-          />
-          <Route
-            path="/admin/preguntas"
-            element={
-              <AdminLayout>
-                <AdminQuestionsPage />
-              </AdminLayout>
-            }
-          />
+          {/* El panel de administración es una app aparte (admin/):
+              vive en otro despliegue y no comparte esta interfaz. */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

@@ -1,4 +1,4 @@
----
+﻿---
 name: ui-design
 description: Pautas de diseño UI/UX para la tienda de lencería Nocturna. Úsalo al crear o modificar pantallas, componentes, estilos o paleta de colores en el frontend.
 ---
@@ -322,4 +322,27 @@ respuesta a "no quiero todo en negro, juega con negro y crema".
   `Spinner`, `ErrorState`, `EmptyState`, `TrustFranja`, `TrustInline`.
   `estiloNavLinkOscuro` es el par oscuro de `estiloNavLink` (mismas medidas).
 
+---
 
+## Panel de administración (`admin/`) — app aparte
+
+El panel **no es la tienda**: vive en `admin/` (Vite propio, puerto 5174, en
+producción `admin.` + `noindex`), con login propio y sin header, footer ni
+WhatsApp. Comparte paleta y tipografías, pero **otro tono**:
+
+- **Títulos en sans** (`h1`–`h3`), no en Bodoni: es back-office. La serif queda
+  solo para el wordmark `NOCTURNA` de la barra lateral.
+- Cada pantalla usa `PageHeader` (`h1` + conteo con `role="status"` + acción
+  principal). Ninguna vista va sin `h1`.
+- Sin clases `font-display` aquí: no existen en el tema del panel.
+- Filas y tarjetas: `bg-white` + hairline `border-tinta/10` sobre `bg-crema`.
+- En móvil, la tarjeta se parte en dos: identidad (foto + nombre + slug) y una
+  fila propia con precio/estado/acción. Nunca meter precio y acción en la misma
+  línea del nombre: el texto se corta y el slug se parte letra por letra.
+- Acciones secundarias dentro de una fila ("Editar", "Responder") van con
+  subrayado: un botón ghost sobre tarjeta blanca no se ve como botón.
+- Los iconos son SVG de trazo 1.5 (`components/ui/Icons.tsx`); ni "+" ni "✓"
+  tipográficos en botones o mensajes.
+- Estados vacíos y de error **sin caja** (igual que la tienda).
+- estados de pedido: vino solo para pendiente/cancelado; el resto, superficies
+  cálidas (`bg-nude`, `bg-acento-fondo`) con texto tinta.

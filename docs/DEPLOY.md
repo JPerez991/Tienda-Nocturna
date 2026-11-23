@@ -143,7 +143,33 @@ Ese archivo hace dos cosas:
 
 ---
 
-## 3. Dominio propio
+## 3. Panel de administración (app aparte, `admin/`)
+
+El panel **ya no vive dentro de la tienda**: es una aplicación propia
+(`admin/`), con su login, su menú y su diseño. La tienda pública no tiene rutas
+`/admin`; el único puente es el enlace "Panel" del menú, visible solo con sesión
+de administrador.
+
+1. En Vercel → **Add New → Project** → el mismo repositorio otra vez.
+   **Root Directory**: `admin`. Framework *Vite*, build `npm run build`,
+   output `dist` (ya está en `admin/vercel.json`).
+2. Reemplaza en `admin/vercel.json` las URLs de Railway por las de tu API
+   (igual que en la tienda: el proxy mantiene la cookie como mismo origen).
+3. Variables:
+   - `VITE_STORE_URL` = `https://tudominio.com` (a dónde apunta "Ver la tienda").
+   - `VITE_API_URL` → **vacía**, por el mismo motivo que en la tienda.
+4. Dominio: añade `admin.tudominio.com` al proyecto del panel.
+   En la tienda, pon `VITE_ADMIN_URL=https://admin.tudominio.com` y redespliega,
+   para que el enlace "Panel" del menú apunte al sitio correcto.
+5. El panel exige rol `ADMIN` en la API. Una cuenta de cliente que entre ahí
+   recibe "Acceso restringido" y puede cambiar de cuenta.
+
+> El panel no se indexa (`noindex, nofollow`) y no muestra precios al público:
+> su contenido es solo para administradores.
+
+---
+
+## 4. Dominio propio
 
 1. Vercel → proyecto → **Settings → Domains → Add** → escribe `nocturna.com`.
 2. En tu proveedor de DNS, crea los registros que Vercel indique
@@ -154,7 +180,7 @@ Ese archivo hace dos cosas:
 
 ---
 
-## 4. Wompi en producción
+## 5. Wompi en producción
 
 1. En el panel de Wompi, pasa la cuenta a producción y copia las cuatro llaves
    (`pub_prod_`, `priv_prod_`, `prod_events_`, `prod_integrity_`).
@@ -171,7 +197,7 @@ Ese archivo hace dos cosas:
 
 ---
 
-## 5. Checklist de aceptación (antes de compartir el link)
+## 6. Checklist de aceptación (antes de compartir el link)
 
 - [ ] Home, catálogo y ficha cargan con fotos reales.
 - [ ] Buscador y filtros del catálogo funcionan.
@@ -179,14 +205,15 @@ Ese archivo hace dos cosas:
 - [ ] Agregar al carrito, cambiar cantidades, quitar artículos.
 - [ ] Checkout: dirección + envío + pago; el pedido aparece en `/pedidos`.
 - [ ] El pago vuelve a `/pedidos` con el estado correcto.
-- [ ] Panel `/admin`: productos, pedidos, preguntas.
-- [ ] Botón de WhatsApp abre el chat con el 311 391 9437.
+- [ ] Panel en `admin.tudominio.com`: login propio y las cuatro secciones.
+- [ ] Una cuenta de cliente recibe "Acceso restringido" en el panel.
+- [ ] La tienda ya no expone `/admin` (muestra "no encontrada").- [ ] Botón de WhatsApp abre el chat con el 311 391 9437.
 - [ ] Páginas `/envios`, `/garantia`, `/pagos`, `/politicas` con datos reales.
 - [ ] Probado en un teléfono real (Safari iOS y Chrome Android).
 
 ---
 
-## 6. Problemas típicos
+## 7. Problemas típicos
 
 | Síntoma | Causa | Solución |
 |---|---|---|
@@ -200,7 +227,7 @@ Ese archivo hace dos cosas:
 
 ---
 
-## 7. Reglas que no se rompen
+## 8. Reglas que no se rompen
 
 - **Ningún secreto en el frontend**: todo lo que empieza con `VITE_` queda escrito
   en el JavaScript público. Llaves privadas de Wompi, `JWT_SECRET` y

@@ -4,6 +4,7 @@ import type { AdminQuestion } from "../../lib/types";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { ErrorState, Spinner } from "../../components/ui/States";
+import { PageHeader } from "../../components/admin/PageHeader";
 
 /* ============================================================
    Admin › Preguntas — responde dudas de clientes.
@@ -21,7 +22,7 @@ export function AdminQuestionsPage() {
   const [respondiendo, setRespondiendo] = useState<string | null>(null);
   const [respuesta, setRespuesta] = useState("");
   const [guardando, setGuardando] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ texto: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,24 +54,53 @@ export function AdminQuestionsPage() {
     setMsg(null);
     try {
       await api.admin.answerQuestion(q.id, respuesta.trim());
-      setMsg("✓ Respuesta enviada.");
+      setMsg({ texto: "Respuesta enviada.", ok: true });
       setRespondiendo(null);
       setRespuesta("");
       setReloadKey((k) => k + 1);
     } catch (e) {
-      setMsg(
-        e instanceof ApiError ? e.message : "No pudimos enviar la respuesta.",
-      );
+      setMsg({
+        texto:
+          e instanceof ApiError ? e.message : "No pudimos enviar la respuesta.",
+        ok: false,
+      });
     } finally {
       setGuardando(false);
     }
   }
 
-  if (error) return <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />;
-  if (questions === null) return <Spinner label="Cargando preguntas…" />;
+  if (error) {
+    return (
+      <>
+        <PageHeader title="Preguntas" />
+        <ErrorState message={error} onRetry={() => setReloadKey((k) => k + 1)} />
+      </>
+    );
+  }
+  if (questions === null) {
+    return (
+      <>
+        <PageHeader title="Preguntas" />
+        <Spinner label="Cargando preguntas…" />
+      </>
+    );
+  }
+
+  const pendientes = questions.filter(
+    (q) => !q.answer && q.status !== "ANSWERED",
+  ).length;
 
   return (
     <>
+      <PageHeader
+        title="Preguntas"
+        meta={
+          noDisponible
+            ? "Módulo pendiente en la API"
+            : `${questions.length} en total · ${pendientes} por responder`
+        }
+      />
+
       {noDisponible && (
         <p className="mb-5  bg-acento-fondo px-4 py-3 text-sm text-vino">
           El listado de preguntas aún no está disponible en la API
@@ -83,15 +113,15 @@ export function AdminQuestionsPage() {
         <p
           role="status"
           className={`mb-4  px-4 py-3 text-sm ${
-            msg.startsWith("✓") ? "bg-tinta/10 text-tinta" : "bg-vino/10 text-vino"
+            msg.ok ? "bg-tinta/10 text-tinta" : "bg-vino/10 text-vino"
           }`}
         >
-          {msg}
+          {msg.texto}
         </p>
       )}
 
       {questions.length === 0 ? (
-        <p className=" border border-dashed border-tibio/30 bg-white/60 px-6 py-14 text-center text-tibio">
+        <p className="px-6 py-16 text-center text-tibio">
           No hay preguntas pendientes.
         </p>
       ) : (
@@ -101,7 +131,7 @@ export function AdminQuestionsPage() {
             return (
               <li
                 key={q.id}
-                className=" border border-carbon/5 bg-white p-5"
+                className="border border-tinta/10 bg-white p-5"
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -169,11 +199,12 @@ export function AdminQuestionsPage() {
                     ) : (
                       <Button
                         size="sm"
-                        variant="secondary"
+                        variant="ghost"
                         onClick={() => {
                           setRespondiendo(q.id);
                           setRespuesta("");
                         }}
+                        className="underline decoration-tinta/30 underline-offset-4 hover:decoration-tinta"
                       >
                         Responder
                       </Button>
