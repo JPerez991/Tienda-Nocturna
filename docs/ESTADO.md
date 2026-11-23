@@ -14,6 +14,21 @@
 > describe el estado histórico de la fase 1 y sigue siendo válido salvo por la
 > ubicación del panel.
 
+> **Actualización 2026-11-23 (noche) — fase 1 terminada en el repo del panel:**
+> commits `d5e38b8`, `2dd0943` y `8fd077d` en `tiendaNocturna-admin` (todos en
+> `main`). El panel ya tiene formulario de producto **por secciones** (básica,
+> ficha técnica dinámica por tipo de artículo, precios/oferta con vigencia,
+> variantes talla×color×stock con hex, imágenes ordenadas con color, estado) y
+> preguntas con **filtros, búsqueda, detalle en diálogo, respuesta/corrección,
+> borrado lógico e historial**. Los datos que aún no están en la API se envían
+> como opcionales y la UI degrada con avisos claros: ver **nota 20** del
+> contrato. `npm run lint` y `npm run build` pasan sin errores ni advertencias.
+> Verificación mecánica: sin desbordamiento a 390 px, targets ≥44 px (salvo el
+> enlace skip), un `h1` por vista, `Escape` cierra el diálogo, 0 errores de
+> consola, detector de Impeccable sin hallazgos. **Siguiente acción concreta:**
+> que el BACKEND responda la nota 20 y mueva esos campos al contrato canónico;
+> con eso se activan los botones de borrado/historial y se persiste la ficha.
+
 ---
 
 ## 1. Qué se está construyendo ahora
@@ -27,7 +42,7 @@ El plan tiene 4 fases y **solo se está ejecutando la 1**:
 
 | Fase | Qué es | Estado |
 | --- | --- | --- |
-| 1 | Panel aparte (repo `tiendaNocturna-admin`), con su login y su diseño | **mudado al repo nuevo; pendiente la UI avanzada** |
+| 1 | Panel aparte (repo `tiendaNocturna-admin`), con su login y su diseño | **hecho** (UI avanzada incluida; datos nuevos esperan al BACKEND) |
 | 2 | Multi-tienda en backend (`Store`, `storeId`, `SUPERADMIN`, tienda por `Host`) | no empezada |
 | 3 | Selector/CRUD de tiendas en el panel | no empezada |
 | 4 | Publicación por tienda | aplazada por el usuario |
