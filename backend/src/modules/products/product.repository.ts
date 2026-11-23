@@ -57,15 +57,29 @@ export const productRepository = {
     });
   },
 
-  findBySlug(slug: string) {
+  // `includeInactive` lo usa el panel (detalle y respuesta de POST/PATCH).
+  // El catálogo público sigue viendo solo productos y variantes activos.
+  findBySlug(slug: string, options: { includeInactive?: boolean } = {}) {
     return prisma.product.findFirst({
-      where: { slug, isActive: true },
+      where: { slug, ...(options.includeInactive ? {} : { isActive: true }) },
       include: {
         category: { select: { id: true, name: true, slug: true } },
-        images: { orderBy: { position: "asc" }, select: { url: true, alt: true } },
+        images: {
+          orderBy: { position: "asc" },
+          select: { url: true, alt: true, position: true, color: true, type: true },
+        },
         variants: {
-          where: { isActive: true },
-          select: { id: true, sku: true, name: true, priceOverride: true, stock: true },
+          ...(options.includeInactive ? {} : { where: { isActive: true } }),
+          select: {
+            id: true,
+            sku: true,
+            name: true,
+            priceOverride: true,
+            stock: true,
+            isActive: true,
+            color: true,
+            colorHex: true,
+          },
         },
         reviews: { select: { rating: true } },
       },

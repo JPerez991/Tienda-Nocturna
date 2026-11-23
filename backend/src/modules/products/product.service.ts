@@ -3,6 +3,7 @@ import { buildProductWhere, productRepository } from "./product.repository.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { sortBySize } from "../../shared/sizes.js";
 import type { ListProductsQuery } from "./product.schemas.js";
+import type { FichaTecnica } from "./product.admin.schemas.js";
 
 // Ordenar por valoración exige el promedio de reseñas, que solo existe como
 // agregado: se calcula en memoria sobre el catálogo completo (tope por
@@ -11,6 +12,14 @@ const RATING_SORT_MAX = 500;
 
 type ProductListItem = Awaited<ReturnType<typeof productRepository.findMany>>[number];
 type ReviewAggregate = Awaited<ReturnType<typeof productRepository.reviewAggregates>>[number];
+type DetailProduct = NonNullable<Awaited<ReturnType<typeof productRepository.findBySlug>>>;
+
+// La ficha se persiste como Json validado por el DTO; si viniera de otra vía
+// con un shape distinto, se devuelve null en vez de filtrar campos arbitrarios.
+function mapFichaTecnica(value: DetailProduct["fichaTecnica"]): FichaTecnica | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as unknown as FichaTecnica;
+}
 
 // Redondea un promedio a 1 decimal (ej: 4.75 → 4.8).
 function roundRating(value: number | null | undefined): number {
@@ -18,7 +27,11 @@ function roundRating(value: number | null | undefined): number {
   return Math.round(value * 10) / 10;
 }
 
-function mapListItem(product: ProductListItem, aggregate?: ReviewAggregate) {
+function mapListItem(
+  product: ProductListItem,
+  aggregate?: ReviewAggregate,
+  options: { includeActive?: boolean } = {},
+) {
   return {
     id: product.id,
     name: product.name,
@@ -29,6 +42,8 @@ function mapListItem(product: ProductListItem, aggregate?: ReviewAggregate) {
     images: product.images,
     rating: roundRating(aggregate?._avg.rating),
     reviewCount: aggregate?._count ?? 0,
+    // `active` solo en el listado admin: la tienda pública no expone el estado.
+    ...(options.includeActive ? { active: product.isActive } : {}),
   };
 }
 
@@ -56,6 +71,7 @@ function orderByFor(sort: ListProductsQuery["sort"]): Prisma.ProductOrderByWithR
 async function listByRating(
   where: Prisma.ProductWhereInput,
   params: { page: number; limit: number; sort: "featured" | "rating" },
+  mapping: { includeActive?: boolean } = {},
 ) {
   const { page, limit, sort } = params;
   const total = await productRepository.count(where);
@@ -81,7 +97,7 @@ async function listByRating(
   const pageItems = sorted.slice((page - 1) * limit, page * limit);
 
   return {
-    items: pageItems.map((product) => mapListItem(product, aggregates.get(product.id))),
+    items: pageItems.map((product) => mapListItem(product, aggregates.get(product.id), mapping)),
     page,
     totalPages: Math.ceil(total / limit),
     total,
@@ -93,9 +109,10 @@ export const productService = {
   async list(params: ListProductsQuery, options: { includeInactive?: boolean } = {}) {
     const { page, limit, category, q, sort } = params;
     const where = buildProductWhere({ category, q, includeInactive: options.includeInactive });
+    const mapping = { includeActive: options.includeInactive === true };
 
     if (sort === "rating" || sort === "featured") {
-      return listByRating(where, { page, limit, sort });
+      return listByRating(where, { page, limit, sort }, mapping);
     }
 
     const [total, products] = await Promise.all([
@@ -111,15 +128,15 @@ export const productService = {
     const aggregates = await aggregatesFor(products.map((product) => product.id));
 
     return {
-      items: products.map((product) => mapListItem(product, aggregates.get(product.id))),
+      items: products.map((product) => mapListItem(product, aggregates.get(product.id), mapping)),
       page,
       totalPages: Math.ceil(total / limit),
       total,
     };
   },
 
-  async detail(slug: string) {
-    const product = await productRepository.findBySlug(slug);
+  async detail(slug: string, options: { includeInactive?: boolean } = {}) {
+    const product = await productRepository.findBySlug(slug, options);
     if (!product) throw new AppError(404, "Producto no encontrado");
 
     const ratings = product.reviews.map((r) => r.rating);
@@ -133,7 +150,17 @@ export const productService = {
       price: product.price,
       compareAtPrice: product.compareAtPrice,
       category: product.category,
-      images: product.images,
+      // ``active`` es la forma del panel; en BD se llama isActive.
+      active: product.isActive,
+      offerEndsAt: product.offerEndsAt ? product.offerEndsAt.toISOString() : null,
+      fichaTecnica: mapFichaTecnica(product.fichaTecnica),
+      images: product.images.map((image) => ({
+        url: image.url,
+        alt: image.alt,
+        order: image.position,
+        color: image.color,
+        type: image.type,
+      })),
       rating: roundRating(avg),
       reviewCount: ratings.length,
       // Siempre de menor a mayor (S → M → L → XL), sin depender del orden
@@ -145,6 +172,9 @@ export const productService = {
         // Precio efectivo: el de la variante o el base del producto.
         price: v.priceOverride ?? product.price,
         stock: v.stock,
+        color: v.color,
+        colorHex: v.colorHex,
+        active: v.isActive,
       })),
     };
   },

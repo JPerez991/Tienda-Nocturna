@@ -40,6 +40,22 @@
 > configurar Google Cloud Console (URI de redirect) y las 5 variables en
 > `backend/.env`. No se tocó el repo del panel.
 
+> **Actualización 2026-11-23 (noche, BACKEND) — nota 20 P1 terminada:**
+> el panel ya puede guardar y volver a leer ficha técnica/atributos, vigencia de
+> oferta, estado del producto y de variantes, colores y orden/color/tipo de
+> imágenes. Prisma: `Product.offerEndsAt`/`fichaTecnica`,
+> `ProductVariant.color`/`colorHex`, `ProductImage.color`/`type`, aplicados con
+> `npm run db:push` (11 productos, 41 variantes y 11 imágenes intactos).
+> `detail()` expone los campos nuevos; el listado admin expone `active` y el
+> público no; el detalle público sigue devolviendo `404` para inactivos, pero
+> con cookie ADMIN (la panel) se puede editar un producto inactivo. Contrato
+> canónico actualizado en las secciones 3 y 6 y nota nueva para FRONTEND.
+> `npx tsc --noEmit` y `npm run build` verdes; probado end-to-end con un producto
+> temporal creado y borrado (sin ensuciar los 11). **Sigue pendiente:** nota 20
+> P2 (preguntas con filtros, borrado lógico e historial); fase 2 multi-tienda
+> requiere confirmación del usuario. Google OAuth sigue inactivo a la espera de
+> credenciales. No se tocó `tiendaNocturna-admin`.
+
 ---
 
 ## 1. Qué se está construyendo ahora
@@ -53,7 +69,7 @@ El plan tiene 4 fases y **solo se está ejecutando la 1**:
 
 | Fase | Qué es | Estado |
 | --- | --- | --- |
-| 1 | Panel aparte (repo `tiendaNocturna-admin`), con su login y su diseño | **hecho** (UI avanzada incluida; datos nuevos esperan al BACKEND) |
+| 1 | Panel aparte (repo `tiendaNocturna-admin`), con su login y su diseño | **hecho** (UI avanzada; nota 20 P1 de datos ya respaldada por la API; P2 pendiente) |
 | 2 | Multi-tienda en backend (`Store`, `storeId`, `SUPERADMIN`, tienda por `Host`) | no empezada |
 | 3 | Selector/CRUD de tiendas en el panel | no empezada |
 | 4 | Publicación por tienda | aplazada por el usuario |
@@ -182,8 +198,7 @@ Revisar: `10-pedidos`, `11-productos`, `12-categorias`, `13-preguntas`,
 2. **Commit de la fase 1**: `admin/` nuevo, borrado de `frontend/src/**/admin`,
    `ADMIN_URL` en la tienda, `docs/DEPLOY.md`. Mensaje sugerido:
    `feat(admin): panel de administración como app independiente`.
-3. Cuando el usuario reactive Supabase: repetir login del panel y probar las
-   cuatro secciones contra datos reales.
+3. Nota 20 P2 (BACKEND): preguntas con filtros, borrado lógico e historial.
 4. **Pedir confirmación al usuario** antes de empezar la fase 2 (modelo
    multi-tienda en backend: toca todas las consultas y la BD; riesgo alto).
    La fase 2 la ejecuta el agente **backend**; el frontend solo consume.

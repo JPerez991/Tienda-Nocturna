@@ -125,6 +125,11 @@ model Product {
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   isActive    Boolean  @default(true)
+  // Vigencia de la oferta; acompaña a compareAtPrice. Null = sin vigencia.
+  offerEndsAt DateTime?
+  // Ficha técnica del panel: { marca, material, genero, tipoArticulo,
+  // atributos: Record<string, string> }. Mapa libre validado en el DTO.
+  fichaTecnica Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -143,7 +148,9 @@ model ProductImage {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   alt       String  @default("")
-  position  Int     @default(0) // orden en el carrusel
+  position  Int     @default(0) // orden en el carrusel (panel: `order`)
+  color     String? // color de la imagen (panel: `color`)
+  type      String  @default("image") // "image" | "video" (panel: `type`)
 }
 
 // Variante = combinación de talla/color/material. Una venta NO puede quedar
@@ -156,7 +163,9 @@ model ProductVariant {
   name           String // ej. "Rojo / Mediano"
   priceOverride  Int? // si difiere del precio base
   stock          Int     @default(0)
-  isActive       Boolean @default(true)
+  isActive       Boolean @default(true) // panel: `active`
+  color          String?
+  colorHex       String? // formato #RRGGBB, validado en el DTO
 
   cartItems CartItem[]
   orderItems OrderItem[]

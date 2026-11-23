@@ -124,14 +124,26 @@ Body (PATCH: mismos campos, todos opcionales):
   "price": 180000,
   "compareAtPrice": 220000,
   "categoryId": "cuid",
-  "images": [{ "url": "https://...", "alt": "Sujetador Encaje Aurora" }],
-  "variants": [{ "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000, "stock": 5 }]
+  "active": true,
+  "offerEndsAt": "2026-12-31T23:59:00Z",
+  "fichaTecnica": {
+    "marca": "Nocturna", "material": "Encaje francés", "genero": "Mujer",
+    "tipoArticulo": "sujetador",
+    "atributos": { "copa": "C", "aro": "Sí", "temporada": "Todo el año" }
+  },
+  "images": [{ "url": "https://...", "alt": "Sujetador Encaje Aurora",
+              "order": 0, "color": "Vino", "type": "image" }],
+  "variants": [{ "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000, "stock": 5,
+                 "color": "Vino", "colorHex": "#7f1d1d", "active": true }]
 }
 ```
 Respuesta `201`/`200`: el producto creado/actualizado. Errores: `400` datos
 inválidos · `409` slug duplicado.
-Falta confirmar: ¿quién sube las imágenes? El frontend usa URL directa mientras
-no exista endpoint de upload.
+Los campos nuevos (`active`, `offerEndsAt`, `fichaTecnica`,
+`images[].order/color/type`, `variants[].color/colorHex/active`) son opcionales
+y **ya están implementados** (nota 20 P1); la forma canónica está en la sección 6.
+No hay upload de archivos: el frontend usa URL directa mientras no exista
+endpoint de upload.
 
 #### `POST /api/admin/categories`
 Body: `{ "name": "Sujetadores", "slug": "sujetadores", "imageUrl": "https://..." }`.
@@ -446,12 +458,26 @@ Con ese esquema, el backend **debe** cumplir esto (hoy no lo cumple):
 > `https://github.com/JPerez991/tiendaNocturna-admin`. El panel quiere llevar el
 > detalle de producto por secciones (información básica, ficha técnica, precios,
 > variantes, imágenes, estado) y un módulo de preguntas con filtros, respuesta,
-> corrección, eliminación e historial. La UI se construye con lo que ya existe;
-> esto es lo que falta **en el contrato** para que esos detalles se puedan guardar.
+> corrección, eliminación e historial.
 > Se acepta que la respuesta diga "se hará por fases": marcar cada punto con
 > `P1` (necesario para el formulario) o `P2` (mejora de preguntas).
 
-#### P1 — Producto: campos opcionales nuevos (sin romper los actuales)
+#### ✅ P1 — ATENDIDA 2026-11-23 (movida al contrato canónico)
+Ya no es un pedido pendiente: los campos se persisten y se devuelven. La forma
+exacta de request/response y las equivalencias están en la **sección 3**
+(`GET /api/products/:slug`) y la **sección 6** (`GET /api/admin/products`,
+`POST`/`PATCH /api/admin/products`), con un resumen para FRONTEND en "Notas para
+FRONTEND → Nota 20 P1". Resumen: `active` → `isActive`, `order` → `position`;
+se agregaron `offerEndsAt`, `fichaTecnica`, `variants[].color/colorHex/active` e
+`images[].color/type`. `fichaTecnica.atributos` se persiste como mapa libre,
+sin interpretar claves. Sin upload de archivos: se siguen enviando URLs
+directas. Reglas del PATCH intactas (`images` se reemplaza completo,
+`variants` se sincroniza por SKU). **El panel no necesita cambios** para esta
+parte.
+
+<details>
+<summary>Pedido original (referencia histórica)</summary>
+
 En `GET /api/products/:slug`, `GET /api/admin/products` y el body de
 `POST /api/admin/products` / `PATCH /api/admin/products/:id`, agregar **campos
 opcionales** (por defecto `null`/`[]`/`true` para no romper al cliente actual):
@@ -487,7 +513,9 @@ opcionales** (por defecto `null`/`[]`/`true` para no romper al cliente actual):
 - Reglas vigentes del PATCH no cambian (`images` se reemplaza completo,
   `variants` se sincroniza por SKU).
 
-#### P2 — Preguntas: filtros, auditoría e historial
+</details>
+
+#### P2 — Preguntas: filtros, auditoría e historial (SIGUE PENDIENTE)
 - `GET /api/admin/questions?status=PENDING|ANSWERED|DELETED|ALL` (por defecto
   `ALL` para no romper al cliente actual). La respuesta actual se mantiene y
   agrega, si está disponible: `email` del usuario, `answeredByName`,
@@ -508,6 +536,35 @@ y la UI cuando el contrato pase a ser canonical (sección 6/8).
 ---
 
 ## Notas para FRONTEND (las escribe el BACKEND)
+
+### ✅ Nota 20 P1. CAMPOS DE PRODUCTO YA PERSISTENTES — 2026-11-23
+
+Lo que tu formulario ya envía **ahora se guarda y se vuelve a leer**. No hay
+que cambiar el panel: los nombres que usas son los de la API.
+
+- `POST` / `PATCH /api/admin/products` aceptan (todos opcionales):
+  `active`, `offerEndsAt`, `fichaTecnica`,
+  `images[].order|color|type`, `variants[].color|colorHex|active`.
+- `GET /api/products/:slug` devuelve, además de lo de siempre:
+  `active`, `offerEndsAt` (ISO `…Z` o `null`), `fichaTecnica` (objeto o `null`),
+  `images[{url,alt,order,color,type}]` y
+  `variants[{id,sku,name,price,stock,color,colorHex,active}]` (tallas ordenadas).
+- `GET /api/admin/products` agrega `active` en cada items; el listado público
+  sigue sin ese campo.
+- Equivalencias internas (no las ves, pero explican el mapeo):
+  `active` ↔ `isActive` y `order` ↔ `position`.
+- Un producto con `active: false` **sigue siendo editable desde el panel**: el
+  detalle con la cookie httpOnly de un ADMIN lo devuelve; sin sesión da `404`,
+  igual que en la tienda pública. Las variantes con `active: false` también se
+  devuelven al panel (y siguen sin poder comprarse).
+- `variants[].active` omitido en un PATCH **no reactiva** la variante; envíalo
+  explícitamente en `true` para activarla. `images` se sigue reemplazando
+  completo y `variants` se sincroniza por SKU.
+- `fichaTecnica.atributos` es un mapa libre; guardamos claves/valores tal cual.
+  `colorHex` debe ser `#RRGGBB` y `order` un entero ≥ 0 (si no: `400`).
+
+El **P2 de la nota 20 (preguntas con filtros, borrado lógico e historial)
+sigue pendiente**: no actives todavía esos botones contra datos reales.
 
 ### Nota. LOGIN DE GOOGLE EN EL PANEL — 2026-11-23
 
@@ -795,12 +852,33 @@ Detalle completo:
   "description": "Encaje francés con aro…",
   "price": 180000, "compareAtPrice": 220000,
   "category": { "id": "cuid", "name": "Sujetadores", "slug": "sujetadores" },
-  "images": [{ "url": "https://...", "alt": "Sujetador Encaje Aurora" }],
+  "active": true,
+  "offerEndsAt": "2026-12-31T23:59:00.000Z",
+  "fichaTecnica": {
+    "marca": "Nocturna", "material": "Encaje francés", "genero": "Mujer",
+    "tipoArticulo": "sujetador",
+    "atributos": { "copa": "C", "aro": "Sí", "temporada": "Todo el año" }
+  },
+  "images": [{ "url": "https://...", "alt": "Sujetador Encaje Aurora",
+              "order": 0, "color": "Vino", "type": "image" }],
   "rating": 4.8, "reviewCount": 23,
-  "variants": [{ "id": "cuid", "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000, "stock": 5 }]
+  "variants": [{ "id": "cuid", "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000,
+                 "stock": 5, "color": "Vino", "colorHex": "#7f1d1d", "active": true }]
 }
 ```
-El `price` de cada variante es su precio efectivo (propio, o el base del producto si no tiene sobrecosto). `variants` viene **ordenado de menor a mayor** (XXS → XS → S → M → L → XL → 2XL → 3XL; ver nota del 2026-11-08 en "Notas para FRONTEND"). Errores: `404` producto no encontrado.
+- `active` es el estado del producto (en BD `isActive`). `offerEndsAt` es ISO
+  8601 o `null` (sin vigencia); acompaña a `compareAtPrice`.
+- `fichaTecnica` es `null` si no se ha guardado. Sus cinco claves son opcionales;
+  `atributos` es un mapa `{ clave: string }` libre (el backend lo persiste tal cual).
+- `images[].order` es el orden en el carrusel (en BD `position`), `color` es
+  `string|null` y `type` es `image|video` (por defecto `image`).
+- `variants[].active` es el estado de la variante (en BD `isActive`);
+  `color`/`colorHex` son `string|null` (`#RRGGBB`).
+- El `price` de cada variante es su precio efectivo (propio, o el base del producto si no tiene sobrecosto). `variants` viene **ordenado de menor a mayor** (XXS → XS → S → M → L → XL → 2XL → 3XL; ver nota del 2026-11-08 en "Notas para FRONTEND").
+- **Productos inactivos**: sin sesión Admin este endpoint devuelve `404` y las
+  variantes inactivas se omiten (tienda pública). Con la cookie `token` de un
+  ADMIN (la panel usa este mismo endpoint) se devuelve el producto inactivo y
+  todas sus variantes, para poder editarlo. Errores: `404` producto no encontrado.
 
 ---
 
@@ -953,23 +1031,41 @@ Body: `{ "status": "SHIPPED" }` (cualquiera de los 7 estados, incl. `REFUNDED`).
 Errores: `404` inexistente.
 
 ### `GET /api/admin/products`
-Misma forma paginada que `GET /api/products` (`{ items, page, totalPages, total }`), mismos filtros (`?q`, `?category`, `?sort`, `?page`, `?limit`). Incluye también los inactivos.
+Misma forma paginada que `GET /api/products` (`{ items, page, totalPages, total }`), mismos filtros (`?q`, `?category`, `?sort`, `?page`, `?limit`). Incluye también los inactivos. Cada `item` agrega **`active: boolean`** (los `items` de `GET /api/products` NO lo tienen). Ejemplo:
+```json
+{ "id": "cuid", "name": "Sujetador Encaje Aurora", "slug": "sujetador-encaje-aurora",
+  "price": 180000, "compareAtPrice": 220000,
+  "category": { "id": "cuid", "name": "Sujetadores", "slug": "sujetadores" },
+  "images": [{ "url": "https://...", "alt": "Sujetador Encaje Aurora" }],
+  "rating": 4.8, "reviewCount": 23, "active": false }
+```
 
 ### `POST /api/admin/products` · `PATCH /api/admin/products/:id`
-Body (PATCH: los mismos campos, todos opcionales):
+Body (PATCH: los mismos campos, **todos opcionales**; `null` en `offerEndsAt`/`fichaTecnica` borra el valor):
 ```json
 {
   "name": "Sujetador Encaje Aurora", "slug": "sujetador-encaje-aurora",
   "description": "Encaje francés con aro…", "price": 180000, "compareAtPrice": 220000,
   "categoryId": "cuid",
-  "images": [{ "url": "https://...", "alt": "Sujetador Encaje Aurora" }],
-  "variants": [{ "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000, "stock": 5 }]
+  "active": true,
+  "offerEndsAt": "2026-12-31T23:59:00Z",
+  "fichaTecnica": {
+    "marca": "Nocturna", "material": "Encaje francés", "genero": "Mujer",
+    "tipoArticulo": "sujetador",
+    "atributos": { "copa": "C", "aro": "Sí", "temporada": "Todo el año" }
+  },
+  "images": [{ "url": "https://...", "alt": "Sujetador Encaje Aurora",
+              "order": 0, "color": "Vino", "type": "image" }],
+  "variants": [{ "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000, "stock": 5,
+                 "color": "Vino", "colorHex": "#7f1d1d", "active": true }]
 }
 ```
-Respuesta `201`/`200`: el producto con **la misma forma del detalle público** (sección 3). Imágenes por **URL directa** (sin upload, nota 17.4).
-- En el PATCH, `images` se **reemplaza completo** (es la lista total).
-- `variants` se **sincroniza por SKU**: los SKU que no envíes se borran; si la variante ya tiene pedidos se desactiva en vez de borrarse. Si el `price` de una variante es igual al precio base, se guarda como "sigue el precio base".
-Errores: `400` datos inválidos o categoría inexistente · `404` producto inexistente (PATCH) · `409` slug o SKU duplicado.
+Campos nuevos (nota 20 P1): `active` (boolean), `offerEndsAt` (ISO 8601 o `null`), `fichaTecnica` (objeto con `marca`, `material`, `genero`, `tipoArticulo` strings opcionales y `atributos: Record<string,string>`), `images[].order` (int ≥ 0), `images[].color` (string o `null`), `images[].type` (`image|video`, defecto `image`), `variants[].color`/`colorHex` (`#RRGGBB`, o `null`) y `variants[].active` (boolean).
+Respuesta `201`/`200`: el producto con **la misma forma del detalle** (sección 3, incluidos los campos nuevos), aunque se haya guardado como inactivo. Imágenes por **URL directa** (sin upload, nota 17.4).
+Equivalencias: **`active` ↔ `isActive`** (producto y variante), **`order` ↔ `position`** (imagen).
+- En el PATCH, `images` se **reemplaza completo** (es la lista total); `order` ausente usa el índice del arreglo.
+- `variants` se **sincroniza por SKU**: los SKU que no envíes se borran; si la variante ya tiene pedidos se desactiva en vez de borrarse. Un `active: false` se respeta; si omites `active` en una variante existente, su estado no cambia (ya no se reactivan todas al guardar). Si el `price` de una variante es igual al precio base, se guarda como "sigue el precio base".
+Errores: `400` datos inválidos (p. ej. `colorHex` sin formato `#RRGGBB` u `order` negativo) o categoría inexistente · `404` producto inexistente (PATCH) · `409` slug o SKU duplicado.
 
 ### `DELETE /api/admin/products/:id`
 `204` al borrar. `409` "No se puede eliminar: ya tiene pedidos asociados". `404` inexistente.

@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { prisma } from "../../shared/prisma.js";
 import { AppError } from "../../shared/errors/app-error.js";
 import { productService } from "./product.service.js";
@@ -40,9 +40,35 @@ function priceOverride(price: number, basePrice: number): number | null {
   return price === basePrice ? null : price;
 }
 
+// `null` en el body borra la ficha (NULL en BD), no guarda un JSON "null".
+function fichaTecnicaData(value: CreateProductInput["fichaTecnica"]) {
+  return value == null ? Prisma.DbNull : (value as unknown as Prisma.InputJsonValue);
+}
+
 /* -------------------------------- Sincronizar ------------------------------- */
 
 type VariantInput = CreateProductInput["variants"][number];
+type ImageInput = CreateProductInput["images"][number];
+
+function imageData(image: ImageInput, index: number) {
+  return {
+    url: image.url,
+    alt: image.alt,
+    position: image.order ?? index,
+    color: image.color ?? null,
+    type: image.type ?? "image",
+  };
+}
+
+function variantData(variant: VariantInput, basePrice: number) {
+  return {
+    name: variant.name,
+    priceOverride: priceOverride(variant.price, basePrice),
+    stock: variant.stock,
+    color: variant.color ?? null,
+    colorHex: variant.colorHex ?? null,
+  };
+}
 
 async function syncVariants(
   tx: Prisma.TransactionClient,
@@ -54,15 +80,18 @@ async function syncVariants(
 
   for (const variant of incoming) {
     const match = current.find((row) => row.sku === variant.sku);
-    const data = {
-      name: variant.name,
-      priceOverride: priceOverride(variant.price, basePrice),
-      stock: variant.stock,
-    };
+    const data = variantData(variant, basePrice);
     if (match) {
-      await tx.productVariant.update({ where: { id: match.id }, data: { ...data, isActive: true } });
+      // `active` ausente deja el estado anterior intacto; presente lo respeta
+      // (incluido false). Antes se reactivaban todas al guardar el formulario.
+      await tx.productVariant.update({
+        where: { id: match.id },
+        data: { ...data, ...(variant.active !== undefined && { isActive: variant.active }) },
+      });
     } else {
-      await tx.productVariant.create({ data: { productId, sku: variant.sku, ...data } });
+      await tx.productVariant.create({
+        data: { productId, sku: variant.sku, isActive: variant.active ?? true, ...data },
+      });
     }
   }
 
@@ -95,26 +124,23 @@ export const productAdminService = {
         price: input.price,
         compareAtPrice: input.compareAtPrice ?? null,
         categoryId: input.categoryId,
-        images: {
-          create: input.images.map((image, position) => ({
-            url: image.url,
-            alt: image.alt,
-            position,
-          })),
-        },
+        isActive: input.active ?? true,
+        offerEndsAt: input.offerEndsAt ?? null,
+        fichaTecnica: fichaTecnicaData(input.fichaTecnica),
+        images: { create: input.images.map(imageData) },
         variants: {
           create: input.variants.map((variant) => ({
             sku: variant.sku,
-            name: variant.name,
-            priceOverride: priceOverride(variant.price, input.price),
-            stock: variant.stock,
+            isActive: variant.active ?? true,
+            ...variantData(variant, input.price),
           })),
         },
       },
     });
 
-    // Respuesta con la MISMA forma del detalle de producto.
-    return productService.detail(created.slug);
+    // Respuesta con la MISMA forma del detalle de producto. `includeInactive`
+    // permite responder aunque el panel acabe de crear un producto inactivo.
+    return productService.detail(created.slug, { includeInactive: true });
   },
 
   async update(id: string, input: UpdateProductInput) {
@@ -140,6 +166,11 @@ export const productAdminService = {
           ...(input.price !== undefined && { price: input.price }),
           ...(input.compareAtPrice !== undefined && { compareAtPrice: input.compareAtPrice }),
           ...(input.categoryId !== undefined && { categoryId: input.categoryId }),
+          ...(input.active !== undefined && { isActive: input.active }),
+          ...(input.offerEndsAt !== undefined && { offerEndsAt: input.offerEndsAt }),
+          ...(input.fichaTecnica !== undefined && {
+            fichaTecnica: fichaTecnicaData(input.fichaTecnica),
+          }),
         },
       });
 
@@ -148,11 +179,9 @@ export const productAdminService = {
         await tx.productImage.deleteMany({ where: { productId: id } });
         if (input.images.length > 0) {
           await tx.productImage.createMany({
-            data: input.images.map((image, position) => ({
+            data: input.images.map((image, index) => ({
               productId: id,
-              url: image.url,
-              alt: image.alt,
-              position,
+              ...imageData(image, index),
             })),
           });
         }
@@ -165,7 +194,7 @@ export const productAdminService = {
       return updated.slug;
     });
 
-    return productService.detail(finalSlug);
+    return productService.detail(finalSlug, { includeInactive: true });
   },
 
   // Borrado físico. Si el producto ya se vendió no se elimina (409) para
