@@ -53,8 +53,8 @@ export default function App() {
           <Route path="/envios" element={<InfoPage {...ENVIOS} />} />
           <Route path="/garantia" element={<InfoPage {...GARANTIA} />} />
           <Route path="/pagos" element={<InfoPage {...PAGOS} />} />
-          {/* El panel de administración es una app aparte (admin/):
-              vive en otro despliegue y no comparte esta interfaz. */}
+          {/* El panel de administración vive en otro repo/despliegue
+              (tiendaNocturna-admin) y no comparte esta interfaz. */}
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

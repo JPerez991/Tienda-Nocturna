@@ -44,9 +44,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (input: LoginInput) => {
-    const u = await api.auth.login(input);
-    setUser(u);
-    return u;
+    const reducido = await api.auth.login(input);
+    // El contrato devuelve un usuario reducido al iniciar sesión (id, nombre y
+    // rol). Hidratamos con /api/auth/me para tener correo y apellidos en el
+    // header y en la cuenta; si falla, seguimos con lo que dio el login.
+    try {
+      const completo = await api.auth.me();
+      setUser(completo);
+      return completo;
+    } catch {
+      setUser(reducido);
+      return reducido;
+    }
   }, []);
 
   const register = useCallback(async (input: RegisterInput) => {

@@ -17,7 +17,7 @@ export function whatsappLink(
 
 /**
  * URL del panel de administración, que es una aplicación aparte
- * (`admin/`). En local corre en 5174; en producción, su subdominio.
+ * (repo aparte `tiendaNocturna-admin`). En local corre en 5174; en producción, su subdominio.
  * Solo se enlaza desde el menú cuando la sesión es de ADMIN.
  */
 export const ADMIN_URL: string =

@@ -143,17 +143,17 @@ Ese archivo hace dos cosas:
 
 ---
 
-## 3. Panel de administración (app aparte, `admin/`)
+## 3. Panel de administración (repo aparte)
 
-El panel **ya no vive dentro de la tienda**: es una aplicación propia
-(`admin/`), con su login, su menú y su diseño. La tienda pública no tiene rutas
-`/admin`; el único puente es el enlace "Panel" del menú, visible solo con sesión
-de administrador.
+El panel **ya no vive dentro de la tienda**: es una aplicación propia en
+`https://github.com/JPerez991/tiendaNocturna-admin`, con su login, su menú y su
+diseño. La tienda pública no tiene rutas `/admin`; el único puente es el enlace
+"Panel" del menú, visible solo con sesión de administrador.
 
-1. En Vercel → **Add New → Project** → el mismo repositorio otra vez.
-   **Root Directory**: `admin`. Framework *Vite*, build `npm run build`,
-   output `dist` (ya está en `admin/vercel.json`).
-2. Reemplaza en `admin/vercel.json` las URLs de Railway por las de tu API
+1. En Vercel → **Add New → Project** → importa el repo `tiendaNocturna-admin`.
+   **Root Directory**: `/` (raíz). Framework *Vite*, build `npm run build`,
+   output `dist` (ya está en `vercel.json` del repo del panel).
+2. Reemplaza en `vercel.json` del panel las URLs de Railway por las de tu API
    (igual que en la tienda: el proxy mantiene la cookie como mismo origen).
 3. Variables:
    - `VITE_STORE_URL` = `https://tudominio.com` (a dónde apunta "Ver la tienda").

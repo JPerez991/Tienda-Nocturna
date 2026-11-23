@@ -31,6 +31,18 @@ Este proyecto tiene **dos "chats" (agentes)** que trabajan en equipo:
 discrepan, se corrige el código para que cumpla el contrato (o se actualiza el
 contrato explícitamente).
 
+## Los tres repositorios
+| Repo | Contenido | Quién lo edita |
+| --- | --- | --- |
+| `Tienda-Nocturna` | `backend/`, `frontend/` y este `docs/` | BACKEND (API) y FRONTEND (tienda) |
+| `tiendaNocturna-admin` | Panel de administración (subdominio `admin.…`) | FRONTEND (también diseña el panel) |
+
+El panel consume **la misma API** y respeta el mismo contrato: este archivo
+(`docs/api-contract.md`) sigue siendo la única fuente de verdad, y el repo del
+admin solo guarda un puntero a él en su `docs/API.md`. Las peticiones de datos
+nuevos para el panel se escriben en **"Notas para BACKEND"** de este contrato;
+no se inventan endpoints ni se duplica el contrato en el otro repo.
+
 ## Cómo abrir cada chat
 - **Chat de BACKEND**: escribe "usa el agente backend" o ábrelo como agente primario.
 - **Chat de FRONTEND**: escribe "usa el agente frontend".

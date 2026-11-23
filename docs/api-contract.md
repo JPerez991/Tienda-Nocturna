@@ -440,6 +440,73 @@ Con ese esquema, el backend **debe** cumplir esto (hoy no lo cumple):
 - `/health` es un chequeo de vida (sin auth, misma respuesta) y sirve como
   healthcheck de Railway. Ver `docs/DEPLOY.md`.
 
+### 20. Panel admin en repo propio: detalle de producto y Q&A avanzado — pedido el 2026-11-23
+
+> Contexto: `admin/` salió de este repo y vive en
+> `https://github.com/JPerez991/tiendaNocturna-admin`. El panel quiere llevar el
+> detalle de producto por secciones (información básica, ficha técnica, precios,
+> variantes, imágenes, estado) y un módulo de preguntas con filtros, respuesta,
+> corrección, eliminación e historial. La UI se construye con lo que ya existe;
+> esto es lo que falta **en el contrato** para que esos detalles se puedan guardar.
+> Se acepta que la respuesta diga "se hará por fases": marcar cada punto con
+> `P1` (necesario para el formulario) o `P2` (mejora de preguntas).
+
+#### P1 — Producto: campos opcionales nuevos (sin romper los actuales)
+En `GET /api/products/:slug`, `GET /api/admin/products` y el body de
+`POST /api/admin/products` / `PATCH /api/admin/products/:id`, agregar **campos
+opcionales** (por defecto `null`/`[]`/`true` para no romper al cliente actual):
+
+```json
+{
+  "active": true,
+  "offerEndsAt": "2026-12-31T23:59:00Z",
+  "fichaTecnica": {
+    "marca": "Nocturna",
+    "material": "Encaje francés",
+    "genero": "Mujer",
+    "tipoArticulo": "sujetador",
+    "atributos": { "copa": "C", "aro": "Sí", "temporada": "Todo el año" }
+  },
+  "variants": [
+    { "sku": "SAU-AUR-M", "name": "Talla M", "price": 180000, "stock": 5,
+      "color": "Vino", "colorHex": "#7f1d1d", "active": true }
+  ],
+  "images": [
+    { "url": "https://...", "alt": "Sujetador Encaje Aurora",
+      "order": 0, "color": "Vino", "type": "image" }
+  ]
+}
+```
+
+- Confirmar que `active: false` ya se devuelve en `GET /api/admin/products`
+  (el contrato dice "incluye los inactivos", pero no expone el campo).
+- `offerEndsAt` acompaña a `compareAtPrice` (oferta vigente hasta esa fecha).
+- `fichaTecnica.atributos` es un mapa libre; el panel activa/desactiva claves
+  según `tipoArticulo`, pero el backend solo debe persistirlo tal cual.
+- **Sin upload de archivos**: se siguen enviando URLs directas, como hoy.
+- Reglas vigentes del PATCH no cambian (`images` se reemplaza completo,
+  `variants` se sincroniza por SKU).
+
+#### P2 — Preguntas: filtros, auditoría e historial
+- `GET /api/admin/questions?status=PENDING|ANSWERED|DELETED|ALL` (por defecto
+  `ALL` para no romper al cliente actual). La respuesta actual se mantiene y
+  agrega, si está disponible: `email` del usuario, `answeredByName`,
+  `updatedAt`, `deletedAt`, `deletedBy`.
+- Confirmar que `PATCH /api/admin/questions/:id` se puede llamar **varias veces**
+  para corregir una respuesta ya enviada (hoy dice `status: "ANSWERED"`, no
+  aclara si permite edición posterior). Devolver la pregunta con `updatedAt`.
+- `DELETE /api/admin/questions/:id` → borrado **lógico**, la pregunta sigue
+  visible para el admin con `status: "DELETED"` pero nunca en
+  `GET /api/products/:slug/questions`.
+- `GET /api/admin/questions/:id/history` → arreglo de versiones anteriores
+  `{ campo: "question" | "answer", textoAnterior, editadoEn }`. Si no se
+  registra historial hoy, avisar y el panel no muestra ese botón.
+
+Todo esto lo implementa el BACKEND; el FRONTEND ajusta `admin/src/lib/types.ts`
+y la UI cuando el contrato pase a ser canonical (sección 6/8).
+
+---
+
 ## Notas para FRONTEND (las escribe el BACKEND)
 
 ### Nota. TALLAS ORDENADAS DE MENOR A MAYOR — 2026-11-08

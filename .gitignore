@@ -38,3 +38,8 @@ prisma/dev.db
 # ── Cobertura / test ──────────────────────────────
 coverage/
 .nyc_output/
+
+# ── Herramientas locales (skills instaladas, no son código del producto) ──
+.agents/
+skills-lock.json
+/package-lock.json

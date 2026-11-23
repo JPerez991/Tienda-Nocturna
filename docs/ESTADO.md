@@ -5,6 +5,15 @@
 > Este archivo dice **dónde vamos, qué está a medias y qué hacer después**.
 > El contrato de la API (única fuente de verdad) sigue en `docs/api-contract.md`.
 
+> **Actualización 2026-11-23 (tarde):** el panel ya NO vive en `admin/` dentro de
+> este repo. Se mudó a **`https://github.com/JPerez991/tiendaNocturna-admin`**
+> (subdominio `admin.…`), y el chat FRONTEND se encarga también de su UI. Los
+> datos nuevos que pide el panel (ficha técnica, atributos, colores, ofertas,
+> preguntas con filtros/historial) están en la **nota 20** de
+> `docs/api-contract.md` → "Notas para BACKEND". Lo que sigue en este archivo
+> describe el estado histórico de la fase 1 y sigue siendo válido salvo por la
+> ubicación del panel.
+
 ---
 
 ## 1. Qué se está construyendo ahora
@@ -18,7 +27,7 @@ El plan tiene 4 fases y **solo se está ejecutando la 1**:
 
 | Fase | Qué es | Estado |
 | --- | --- | --- |
-| 1 | Panel aparte (`admin/`), con su login y su diseño | **en curso (casi lista)** |
+| 1 | Panel aparte (repo `tiendaNocturna-admin`), con su login y su diseño | **mudado al repo nuevo; pendiente la UI avanzada** |
 | 2 | Multi-tienda en backend (`Store`, `storeId`, `SUPERADMIN`, tienda por `Host`) | no empezada |
 | 3 | Selector/CRUD de tiendas en el panel | no empezada |
 | 4 | Publicación por tienda | aplazada por el usuario |
